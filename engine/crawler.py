@@ -22,7 +22,21 @@ MAX_THREADS = 10
 found_links = []
 
 
-def crawl(link, depth=0):
+def crawl(link: str, depth=0) -> None:
+    """
+    Crawls a website recursively and extracts links from HTML pages.
+    
+    Parameters:
+    - `link` (str): The URL to start crawling from.
+    - `depth` (int): The current depth of the crawl.
+
+    Example:
+    ```python
+    crawl("https://www.tuebingen.de/en/")
+    ```
+    """
+
+
     # If we have reached the maximum depth, stop
     if depth >= MAX_DEPTH:
         return
