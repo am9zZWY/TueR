@@ -1,7 +1,10 @@
-# Parsing
+##### Parsing #####
 from bs4 import BeautifulSoup
 import requests
-# Threading
+# Robots.txt
+import urllib.robotparser
+
+##### Threading #####
 from concurrent.futures import ThreadPoolExecutor
 
 # Maximum depth to crawl to
@@ -10,8 +13,8 @@ MAX_DEPTH = 5
 # URL seeds to start crawling from
 SEEDS = [
     "https://www.tuebingen.de/en/",
-    #"https://en.wikipedia.org/wiki/Tübingen",
-    #"https://www.komoot.com/guide/355570/castles-in-tuebingen-district",
+    # "https://en.wikipedia.org/wiki/Tübingen",
+    # "https://www.komoot.com/guide/355570/castles-in-tuebingen-district",
     "https://www.unimuseum.uni-tuebingen.de/en/"
 ]
 
@@ -22,10 +25,41 @@ MAX_THREADS = 10
 found_links = []
 
 
+def get_domain(url: str) -> str:
+    return "/".join(url.split("/")[0:3])
+
+
+def can_fetch(url: str) -> bool:
+    """
+    Respect robots.txt and check if we can fetch a URL.
+    For more information: http://www.robotstxt.org/robotstxt.html
+
+    Parameters:
+    - `url` (str): The URL to check.
+
+    Returns:
+    - `bool`: Whether we can fetch the URL or not.
+
+    Example:
+    ```python
+    can_fetch("https://www.tuebingen.de/en/")
+    ```
+    """
+
+    domain = get_domain(url)
+    robots_url = domain + "/robots.txt"
+    rp = urllib.robotparser.RobotFileParser(robots_url)
+    try:
+        rp.read()
+    except:
+        return True
+    return rp.can_fetch("*", url)
+
+
 def crawl(link: str, depth=0) -> None:
     """
     Crawls a website recursively and extracts links from HTML pages.
-    
+
     Parameters:
     - `link` (str): The URL to start crawling from.
     - `depth` (int): The current depth of the crawl.
@@ -36,16 +70,22 @@ def crawl(link: str, depth=0) -> None:
     ```
     """
 
+    # Stop if:
+    # - reached the maximum depth, stop
+    # - already found the link
+    # - the link is not a valid URL
+    if depth >= MAX_DEPTH or link in found_links or not link.startswith("http"):
+        return
 
-    # If we have reached the maximum depth, stop
-    if depth >= MAX_DEPTH:
+    # Check if we can fetch the URL
+    if not can_fetch(link):
         return
 
     # Add the link to the list of links
     if link not in found_links:
         found_links.append(link)
 
-    print('\r', f"Crawling {link} at depth {depth}", end="")
+    print(f"{' ' * depth}Crawling {link} ...")
 
     try:
         response = requests.get(link)
@@ -55,11 +95,11 @@ def crawl(link: str, depth=0) -> None:
         # Check for links
         for link in soup.find_all("a"):
             found_link = link.get("href")
-            
+
             # If the link is not in the list of found links, crawl it
             if found_link not in found_links:
                 if found_link.startswith("/"):
-                    domain = "/".join(response.url.split("/")[0:3])
+                    domain = get_domain(response.url)
                     found_link = domain + found_link
 
                 crawl(found_link, depth + 1)
