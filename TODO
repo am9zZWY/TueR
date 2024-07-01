@@ -1,0 +1,20 @@
+# Search Engine
+
+- [ ] Web Crawling
+  - [x] Seed
+  - [ ] Access Control
+    - [x] Robots.txt
+    - [ ] Rate limit
+  - [ ] Duplicates
+    - [x] Check URL
+    - [ ] Simhash
+- [ ] Text-Representation
+- [ ] Indexing
+- [ ] Statistical Ranking
+- [ ] L2R
+- [ ] Link analysis
+- [ ] Evaluation
+
+# Questions
+
+- Is langdetect (https://pypi.org/project/langdetect/) allowed to detect if a website is e.g. in english? Looking at the domain, html tag isn't enough
