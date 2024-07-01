@@ -9,13 +9,36 @@ from concurrent.futures import ThreadPoolExecutor
 
 # Maximum depth to crawl to
 MAX_DEPTH = 5
-# keywords = ["tübingen", "castle", "university", "museum", "food"]
+# Keywords to search for
+# They must be present in the HTML of the page
+REQUIRED_KEYWORDS = ["tübingen", "tuebingen"]
 # URL seeds to start crawling from
 SEEDS = [
     "https://www.tuebingen.de/en/",
     # "https://en.wikipedia.org/wiki/Tübingen",
-    # "https://www.komoot.com/guide/355570/castles-in-tuebingen-district",
-    "https://www.unimuseum.uni-tuebingen.de/en/"
+    "https://www.komoot.com/guide/355570/castles-in-tuebingen-district",
+    "https://www.unimuseum.uni-tuebingen.de/en/",
+    "https://www.tuebingen-info.de",
+    "https://www.uni-tuebingen.de",
+    "https://www.tuebingen.de",
+    "https://www.tripadvisor.com/Tourism-g198539-Tubingen_Baden_Wurttemberg-Vacations.html",
+    "https://www.lonelyplanet.com/germany/baden-wurttemberg/tubingen",
+    "https://www.tuebingen-info.de/en",
+    "https://www.my-stuwe.de/en/tuebingen/",
+    "https://www.tuebingen-info.de/en/experience/shopping/farmers-market",
+    "https://www.my-stuwe.de/en/",
+    "https://www.swtue.de/en/",
+    "https://en.wikipedia.org/wiki/T%C3%BCbingen",
+    "https://www.tuebingen.de/en/calendar",
+    "https://www.tuebingen-info.de/en/experience/nature",
+    "https://www.ub.uni-tuebingen.de/en/",
+    "https://www.tuebingen.de/en/7695.html",
+    "https://www.tripadvisor.com/Attractions-g198539-Activities-c20-Tubingen_Baden_Wurttemberg.html",
+    "https://www.kulturhalle-tuebingen.de",
+    "https://www.tuebingen-info.de/en/experience/nature/hiking-cycling",
+    "https://www.tagblatt.de",
+    "https://www.kunsthalle-tuebingen.de",
+    "https://www.meetup.com/topics/language-exchange/de/t%C3%BCbingen/",
 ]
 
 
@@ -23,7 +46,6 @@ MAX_THREADS = 10
 
 # List of links we have found
 found_links = []
-
 
 def get_domain(url: str) -> str:
     return "/".join(url.split("/")[0:3])
@@ -72,9 +94,9 @@ def crawl(link: str, depth=0) -> None:
 
     # Stop if:
     # - reached the maximum depth, stop
-    # - already found the link
     # - the link is not a valid URL
-    if depth >= MAX_DEPTH or link in found_links or not link.startswith("http"):
+    # - already found the link
+    if depth >= MAX_DEPTH or not link.startswith("http") or link in found_links:
         return
 
     # Check if we can fetch the URL
@@ -85,15 +107,24 @@ def crawl(link: str, depth=0) -> None:
     if link not in found_links:
         found_links.append(link)
 
-    print(f"{' ' * depth}Crawling {link} ...")
-
     try:
         response = requests.get(link)
 
         soup = BeautifulSoup(response.text, "lxml")
+        
+        # Check language in html-tag
+        if not "en" in soup.html["lang"]:
+            return
+        
+        text = soup.text.lower()
+        # Check for keywords
+        if not any([keyword in text for keyword in REQUIRED_KEYWORDS]):
+            return
+        
+        print(f"{' ' * depth}Crawling {link} ...")
 
         # Check for links
-        for link in soup.find_all("a"):
+        for link in soup.find_all("a", href=True):
             found_link = link.get("href")
 
             # If the link is not in the list of found links, crawl it
