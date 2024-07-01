@@ -1,10 +1,12 @@
 ##### General #####
+import collections
 import json
 import os
 import sys
 ##### Parsing #####
 from bs4 import BeautifulSoup
 import requests
+from urllib.parse import urlparse
 # Robots.txt
 import urllib.robotparser
 
@@ -21,15 +23,37 @@ SEEDS = [
     "https://www.tuebingen.de/en/",
     "https://www.bio.mpg.de/2923/en",
     "https://www.uni-tuebingen.de/en/",
+    "https://health-nlp.com/index.html",
+    "https://www.medizin.uni-tuebingen.de/en-de/startseite/",
     "https://www.my-stuwe.de/en/",
     "https://www.unimuseum.uni-tuebingen.de/en/",
     "https://www.komoot.com/guide/210692/attractions-around-tuebingen",
     "https://hoelderlinturm.de/english/",
+    "https://www.fsi.uni-tuebingen.de/en/",
+    "https://kki.fsi.uni-tuebingen.de",
     "https://www.stocherkahnfahrten.com/English/Stocherkahnrennen-English.html",
     "https://www.germany.travel/en/cities-culture/tuebingen.html",
     "https://justinpluslauren.com/things-to-do-in-tubingen-germany/",
+    "https://www.yelp.de/search?find_desc=&find_loc=Tübingen%2C+Baden-Württemberg",
+    "https://www.tripadvisor.com/Tourism-g198539-Tubingen_Baden_Wurttemberg-Vacations.html",
 ]
-
+# Domains to ignore
+IGNORE_DOMAINS = [
+    "github.com",
+    "linkedin.com",
+    "facebook.com",
+    "instagram.com",
+    "twitter.com",
+    "youtube.com",
+    "wikipedia.org",
+    "google.com",
+    "google.de",
+    "google.co.uk",
+    "amazon.com",
+    "cctue.de",
+    "spotify.com",
+]
+# Supported languages
 LANGS = ["en", "en-GB", "en-US", "english"]
 
 MAX_THREADS = 10
@@ -37,13 +61,79 @@ MAX_THREADS = 10
 # List of links we have found
 ignore_links = set()
 found_links = set()
+to_crawl = collections.deque(SEEDS)
+to_crawl_set = set(SEEDS)
+
+
+def save_state():
+    """
+    Saves the global state to a file.
+    """
+
+    global ignore_links, found_links, to_crawl
+
+    # Create directory for crawler states
+    if not os.path.exists("crawler_states"):
+        os.makedirs("crawler_states")
+
+    with open(f"crawler_states/global.json", "w") as f:
+        # Write it as json
+        f.write(json.dumps({
+            "to_crawl": list(to_crawl),
+            "ignore_links": list(ignore_links),
+            "found_links": list(found_links),
+        }))
+
+
+def load_state():
+    """
+    Loads the global state from a file into memory.
+    """
+
+    global ignore_links, found_links, to_crawl
+
+    if not os.path.exists(f"crawler_states/global.json"):
+        print("No global state found")
+        to_crawl = collections.deque(SEEDS)
+        return
+
+    with open(f"crawler_states/global.json", "r") as f:
+        data = json.loads(f.read())
+        to_crawl = collections.deque(data["to_crawl"])
+        to_crawl_set = set(data["to_crawl"])
+        ignore_links = set(data["ignore_links"])
+        found_links = set(data["found_links"])
 
 
 def get_domain(url: str) -> str:
-    return "/".join(url.split("/")[0:3])
+    """
+    Extracts the domain from a URL.
+
+    Parameters:
+    - `url` (str): The URL to extract the domain from.
+
+    Returns:
+    - `str`: The domain of the URL.
+    """
+
+    return urlparse(url).netloc
 
 
-def can_fetch(url: str) -> bool:
+def get_base_url(url: str) -> str:
+    """
+    Extracts the base URL from a URL.
+
+    Parameters:
+    - `url` (str): The URL to extract the base URL from.
+
+    Returns:
+    - `str`: The base URL of the URL.
+    """
+
+    return urlparse(url).scheme + "://" + urlparse(url).netloc
+
+
+def check_robots(url: str) -> bool:
     """
     Respect robots.txt and check if we can fetch a URL.
     For more information: http://www.robotstxt.org/robotstxt.html
@@ -60,7 +150,7 @@ def can_fetch(url: str) -> bool:
     ```
     """
 
-    domain = get_domain(url)
+    domain = get_base_url(url)
     robots_url = domain + "/robots.txt"
     rp = urllib.robotparser.RobotFileParser(robots_url)
     try:
@@ -70,78 +160,10 @@ def can_fetch(url: str) -> bool:
     return rp.can_fetch("*", url)
 
 
-def save_state():
-    """
-    Saves the global state to a file.
-    """
-
-    global ignore_links, found_links
-
-    # Create directory for crawler states
-    if not os.path.exists("crawler_states"):
-        os.makedirs("crawler_states")
-
-    with open(f"crawler_states/global.json", "w") as f:
-        # Write it as json
-        f.write(json.dumps({
-            "ignore_links": list(ignore_links),
-            "found_links": list(found_links)
-        }))
-
-
-def load_state():
-    """
-    Loads the global state from a file into memory.
-    """
-
-    global ignore_links, found_links
-
-    if not os.path.exists(f"crawler_states/global.json"):
-        print("No global state found")
-        return
-
-    with open(f"crawler_states/global.json", "r") as f:
-        data = json.loads(f.read())
-        ignore_links = set(data["ignore_links"])
-        found_links = set(data["found_links"])
-
-
 class Crawler:
-    def __init__(self, identifier: str, start_link: str) -> None:
+    def __init__(self, identifier: str) -> None:
         self.identifier = identifier
-        self.to_crawl = [start_link]
-        self.visited_links = set()
-        self.load_crawlers_state()
-
-    def save_crawlers_state(self) -> None:
-        """
-        Saves the state of the crawler to a file.
-        """
-
-        # Create directory for crawler states
-        if not os.path.exists("crawler_states"):
-            os.makedirs("crawler_states")
-
-        with open(f"crawler_states/crawler_state_{self.identifier}.json", "w") as f:
-            # Write it as json
-            f.write(json.dumps({
-                "to_crawl": self.to_crawl,
-                "visited_links": list(self.visited_links)
-            }))
-
-    def load_crawlers_state(self) -> None:
-        """
-        Loads the state of the crawler from a file into memory.
-        """
-
-        if not os.path.exists(f"crawler_states/crawler_state_{self.identifier}.txt"):
-            print(f"No state found for crawler {self.identifier}")
-            return [], []
-
-        with open(f"crawler_states/crawler_state_{self.identifier}.json", "r") as f:
-            data = json.loads(f.read())
-            self.to_crawl = data["to_crawl"]
-            self.visited_links = set(data["visited_links"])
+        print(f"Initialized Crawler {self.identifier}")
 
     def crawl(self) -> None:
         """
@@ -153,28 +175,37 @@ class Crawler:
         ```
         """
 
-        while self.to_crawl:
+        global found_links, ignore_links, to_crawl
+
+        while True:
             # If we have reached the maximum size, stop
             if len(found_links) >= MAX_SIZE:
                 print("max size reached")
                 break
 
-            # Get the link to crawl
-            link = self.to_crawl.pop()
+            # Get the next link to crawl
+            link = to_crawl.popleft()
+            to_crawl_set.remove(link)
 
-            print(f"Crawling {link}: ...", end="")
+            crawling_str = f"Crawler {self.identifier} crawling {link}: "
 
             if not link.startswith("http"):
-                print("not a valid URL")
+                print(crawling_str + "skipped")
                 continue
 
-            if link in ignore_links or link in self.visited_links:
-                print("already ignored or visited")
+            # Check if the domain is in the ignore list
+            if any([domain in link for domain in IGNORE_DOMAINS]):
+                print(crawling_str + "domain in ignore list")
+                ignore_links.add(link)
+                continue
+
+            if link in ignore_links or link in found_links:
+                print(crawling_str + "already ignored or visited")
                 continue
 
             # Check if we can fetch the URL
-            if not can_fetch(link):
-                print("robots.txt disallows")
+            if not check_robots(link):
+                print(crawling_str + "robots.txt disallows")
                 ignore_links.add(link)
                 continue
 
@@ -184,8 +215,10 @@ class Crawler:
 
                 # Check language in html-tag and in the link
                 html_lang = soup.find("html").get("lang")
-                if (html_lang is not None and html_lang not in LANGS) and not any([lang in link for lang in LANGS]):
-                    print("language not supported")
+                xml_lang = soup.find("html").get("xml:lang")
+                if (html_lang is None and xml_lang is None and not any([split == lang for split in link.split("/") for lang in LANGS])) or (html_lang is not None and html_lang not in LANGS) or (xml_lang is not None and xml_lang not in LANGS):
+                    print(crawling_str + "language not supported: " +
+                          str(html_lang) + " " + str(xml_lang))
                     ignore_links.add(link)
                     continue
 
@@ -193,7 +226,7 @@ class Crawler:
                 # Check if there is any of the required keywords in the text
                 if not any([keyword in text for keyword in REQUIRED_KEYWORDS]):
                     ignore_links.add(link)
-                    print("no required keywords")
+                    print(crawling_str + "no required keywords")
                     continue
 
                 # Check for links
@@ -204,21 +237,22 @@ class Crawler:
                     if found_link.startswith("#"):
                         continue
 
+                    # TODO: Edge-case: If the link starts with ./
                     if found_link.startswith("/"):
-                        domain = get_domain(response.url)
-                        found_link = domain + found_link
+                        base_url = get_base_url(response.url)
+                        found_link = base_url + found_link
 
-                    if found_link not in self.visited_links and found_link not in ignore_links:
-                        self.to_crawl.append(found_link)
+                    if found_link not in ignore_links and found_link not in found_links and found_link not in to_crawl_set and link.startswith("http"):
+                        to_crawl.append(found_link)
+                        to_crawl_set.add(found_link)
 
                 # Add the link to the list of links
                 if link not in found_links and link not in ignore_links:
                     found_links.add(link)
-                    self.visited_links.add(link)
 
-                print("done")
+                print(crawling_str + "done")
             except Exception as e:
-                print("error occurred")
+                print(crawling_str + "error occurred", e)
                 # Do nothing if an error occurs
                 continue
 
@@ -229,13 +263,12 @@ def main():
 
     try:
         with ThreadPoolExecutor(max_workers=MAX_THREADS) as executor:
-            for i, seed in enumerate(SEEDS):
-                crawler = Crawler(i, seed)
+            for i in range(MAX_THREADS):
+                crawler = Crawler(i)
                 crawlers.append(crawler)
                 executor.submit(crawler.crawl)
 
-        for crawler in crawlers:
-            crawler.save_crawlers_state()
+        save_state()
 
         print("Found", len(found_links), "links")
         for link in found_links:
@@ -244,8 +277,6 @@ def main():
     except KeyboardInterrupt:
         print('Interrupted')
         try:
-            for crawler in crawlers:
-                crawler.save_crawlers_state()
             save_state()
             sys.exit(130)
         except SystemExit:
