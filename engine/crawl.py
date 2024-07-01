@@ -171,7 +171,8 @@ class Crawler:
 
         Example:
         ```python
-        crawler = Crawler("0", "https://www.tuebingen.de/en/")
+        to_crawl = collections.deque(["https://www.tuebingen.de/en/"])
+        crawler = Crawler("0")
         ```
         """
 
