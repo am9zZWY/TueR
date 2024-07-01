@@ -1,18 +1,18 @@
 ##### General #####
-import collections
+import collections  # For deque
 import json
 import os
 import sys
 ##### Parsing #####
-from bs4 import BeautifulSoup
-import requests
-from urllib.parse import urlparse
+from bs4 import BeautifulSoup  # HTML parsing
+import requests  # HTTP requests
+from urllib.parse import urlparse  # Parsing URLs
 # Robots.txt
-import urllib.robotparser
-
+import urllib.robotparser  # For checking robots.txt
 ##### Threading #####
 from concurrent.futures import ThreadPoolExecutor
 
+##### Constants #####
 # Maximum size of the links
 MAX_SIZE = 1000
 # Keywords to search for
@@ -55,54 +55,8 @@ IGNORE_DOMAINS = [
 ]
 # Supported languages
 LANGS = ["en", "en-GB", "en-US", "english"]
-
+# Maximum number of threads
 MAX_THREADS = 10
-
-# List of links we have found
-ignore_links = set()
-found_links = set()
-to_crawl = collections.deque(SEEDS)
-to_crawl_set = set(SEEDS)
-
-
-def save_state():
-    """
-    Saves the global state to a file.
-    """
-
-    global ignore_links, found_links, to_crawl
-
-    # Create directory for crawler states
-    if not os.path.exists("crawler_states"):
-        os.makedirs("crawler_states")
-
-    with open(f"crawler_states/global.json", "w") as f:
-        # Write it as json
-        f.write(json.dumps({
-            "to_crawl": list(to_crawl),
-            "ignore_links": list(ignore_links),
-            "found_links": list(found_links),
-        }))
-
-
-def load_state():
-    """
-    Loads the global state from a file into memory.
-    """
-
-    global ignore_links, found_links, to_crawl
-
-    if not os.path.exists(f"crawler_states/global.json"):
-        print("No global state found")
-        to_crawl = collections.deque(SEEDS)
-        return
-
-    with open(f"crawler_states/global.json", "r") as f:
-        data = json.loads(f.read())
-        to_crawl = collections.deque(data["to_crawl"])
-        to_crawl_set = set(data["to_crawl"])
-        ignore_links = set(data["ignore_links"])
-        found_links = set(data["found_links"])
 
 
 def get_domain(url: str) -> str:
@@ -158,6 +112,13 @@ def check_robots(url: str) -> bool:
     except:
         return True
     return rp.can_fetch("*", url)
+
+
+# List of links we have found
+ignore_links = set()
+found_links = set()
+to_crawl = collections.deque(SEEDS)
+to_crawl_set = set(SEEDS)
 
 
 class Crawler:
@@ -258,10 +219,50 @@ class Crawler:
                 continue
 
 
-def main():
-    crawlers = []
+def save_state():
+    """
+    Saves the global state to a file.
+    """
+
+    global ignore_links, found_links, to_crawl
+
+    # Create directory for crawler states
+    if not os.path.exists("crawler_states"):
+        os.makedirs("crawler_states")
+
+    with open(f"crawler_states/global.json", "w") as f:
+        # Write it as json
+        f.write(json.dumps({
+            "to_crawl": list(to_crawl),
+            "ignore_links": list(ignore_links),
+            "found_links": list(found_links),
+        }))
+
+
+def load_state():
+    """
+    Loads the global state from a file into memory.
+    """
+
+    global ignore_links, found_links, to_crawl, to_crawl_set
+
+    if not os.path.exists(f"crawler_states/global.json"):
+        print("No global state found")
+        to_crawl = collections.deque(SEEDS)
+        return
+
+    with open(f"crawler_states/global.json", "r") as f:
+        data = json.loads(f.read())
+        to_crawl = collections.deque(data["to_crawl"])
+        to_crawl_set = set(data["to_crawl"])
+        ignore_links = set(data["ignore_links"])
+        found_links = set(data["found_links"])
+
+
+def start_crawl():
     load_state()
 
+    crawlers = []
     try:
         with ThreadPoolExecutor(max_workers=MAX_THREADS) as executor:
             for i in range(MAX_THREADS):
@@ -276,7 +277,6 @@ def main():
             print(link)
 
     except KeyboardInterrupt:
-        print('Interrupted')
         try:
             save_state()
             sys.exit(130)
@@ -285,4 +285,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    start_crawl()
