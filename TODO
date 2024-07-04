@@ -8,7 +8,14 @@
   - [ ] Duplicates
     - [x] Check URL
     - [ ] Simhash
+  - [ ] Language
+    - [ ] nltk.guess_language
 - [ ] Text-Representation
+  - [ ] soup.text
+  - [ ] Alt-text of images
+  - [ ] Meta-text and description
+  - [ ] Click-bait detector
+  - [ ] Title and first half of document are weighted higher than rest
 - [ ] Indexing
 - [ ] Statistical Ranking
 - [ ] L2R
