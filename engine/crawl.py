@@ -138,6 +138,7 @@ class Crawler:
         """
 
         global found_links, ignore_links, to_crawl
+        i = 1
 
         while True:
             # If we have reached the maximum size, stop
@@ -178,6 +179,11 @@ class Crawler:
                 # Check language in html-tag and in the link
                 html_lang = soup.find("html").get("lang")
                 xml_lang = soup.find("html").get("xml:lang")
+                img_tags = soup.findAll("img")
+                alternative_text = []
+                for img_tag in img_tags:
+                    alternative_text.append(img_tag["alt"])
+                
                 if (html_lang is None and xml_lang is None and not any([split == lang for split in link.split("/") for lang in LANGS])) or (html_lang is not None and html_lang not in LANGS) or (xml_lang is not None and xml_lang not in LANGS):
                     print(crawling_str + "language not supported: " +
                           str(html_lang) + " " + str(xml_lang))
@@ -185,6 +191,11 @@ class Crawler:
                     continue
 
                 text = soup.text.lower()
+                if i==1:
+                    print(text)
+                    print(f"Image alternative text: {alternative_text}")
+                    i+=1
+                
                 # Check if there is any of the required keywords in the text
                 if not any([keyword in text for keyword in REQUIRED_KEYWORDS]):
                     ignore_links.add(link)
