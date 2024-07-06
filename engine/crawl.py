@@ -180,6 +180,7 @@ class Crawler:
                 html_lang = soup.find("html").get("lang")
                 xml_lang = soup.find("html").get("xml:lang")
                 img_tags = soup.findAll("img")
+                
                 alternative_text = []
                 for img_tag in img_tags:
                     alternative_text.append(img_tag["alt"])
@@ -191,10 +192,12 @@ class Crawler:
                     continue
 
                 text = soup.text.lower()
+                
                 if i==1:
                     print(text)
                     print(f"Image alternative text: {alternative_text}")
                     i+=1
+                    text_obj = {"link:":link, "text_content":text, }
                 
                 # Check if there is any of the required keywords in the text
                 if not any([keyword in text for keyword in REQUIRED_KEYWORDS]):
