@@ -194,7 +194,7 @@ class Crawler:
 
                 text = soup.text.lower()
                 alt_texts = [img.get("alt") for img in img_tags]
-                text = text + " ".join(alt_texts) + " " + str(desciption) + " " + str(title_content)
+                text = text + " ".join(alt_texts) + " " + str(desciption_content) + " " + str(title_content)
                 if i==1:
                     print(f"Text: {text}")
                     print(f"Type of text: {type(text)}")
