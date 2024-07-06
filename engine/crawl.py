@@ -11,6 +11,7 @@ from urllib.parse import urlparse  # Parsing URLs
 import urllib.robotparser  # For checking robots.txt
 ##### Threading #####
 from concurrent.futures import ThreadPoolExecutor
+from custom_tokenizer import tokenize_data, tf_idf_vectorize, top_30_words
 
 ##### Constants #####
 # Maximum size of the links
@@ -56,7 +57,7 @@ IGNORE_DOMAINS = [
 # Supported languages
 LANGS = ["en", "en-GB", "en-US", "english"]
 # Maximum number of threads
-MAX_THREADS = 10
+MAX_THREADS = 1
 
 
 def get_domain(url: str) -> str:
@@ -180,10 +181,10 @@ class Crawler:
                 html_lang = soup.find("html").get("lang")
                 xml_lang = soup.find("html").get("xml:lang")
                 img_tags = soup.findAll("img")
-                
-                alternative_text = []
-                for img_tag in img_tags:
-                    alternative_text.append(img_tag["alt"])
+                desciption = soup.find("meta", attrs={"name": "description"})
+                desciption_content = desciption.get("content") if desciption is not None else ""
+                title = soup.find("title")
+                title_content = title.string if title is not None else ""
                 
                 if (html_lang is None and xml_lang is None and not any([split == lang for split in link.split("/") for lang in LANGS])) or (html_lang is not None and html_lang not in LANGS) or (xml_lang is not None and xml_lang not in LANGS):
                     print(crawling_str + "language not supported: " +
@@ -192,13 +193,16 @@ class Crawler:
                     continue
 
                 text = soup.text.lower()
-                
+                alt_texts = [img.get("alt") for img in img_tags]
+                text = text + " ".join(alt_texts) + " " + str(desciption) + " " + str(title_content)
                 if i==1:
-                    print(text)
-                    print(f"Image alternative text: {alternative_text}")
+                    print(f"Text: {text}")
+                    print(f"Type of text: {type(text)}")
+                    print("Now printing top 30 words")
+                    top_30 = top_30_words(data=[text])
+                    print(f"Top 30 words: {top_30}")
                     i+=1
-                    text_obj = {"link:":link, "text_content":text, }
-                
+            
                 # Check if there is any of the required keywords in the text
                 if not any([keyword in text for keyword in REQUIRED_KEYWORDS]):
                     ignore_links.add(link)
@@ -227,6 +231,7 @@ class Crawler:
                     found_links.add(link)
 
                 print(crawling_str + "done")
+            
             except Exception as e:
                 print(crawling_str + "error occurred", e)
                 # Do nothing if an error occurs
