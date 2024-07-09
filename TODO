@@ -9,7 +9,7 @@
     - [x] Check URL
     - [ ] Simhash
   - [ ] Language
-    - [ ] nltk.guess_language
+    - [x] nltk.guess_language
 - [ ] Text-Representation
   - [ ] soup.text
   - [ ] Alt-text of images
