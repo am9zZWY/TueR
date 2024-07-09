@@ -11,19 +11,23 @@ from urllib.parse import urlparse  # Parsing URLs
 import urllib.robotparser  # For checking robots.txt
 ##### Threading #####
 from concurrent.futures import ThreadPoolExecutor
+##### Tokenization #####
 from custom_tokenizer import tokenize_data, tf_idf_vectorize, top_30_words
+##### Language detection #####
+from nltk.classify import textcat
 
 ##### Constants #####
 # Maximum size of the links
 MAX_SIZE = 1000
 # Keywords to search for
 # They must be present in the HTML of the page
-REQUIRED_KEYWORDS = ["tübingen", "tuebingen"]
+REQUIRED_KEYWORDS = ["tübingen", "tuebingen", "tubingen", "t%C3%BCbingen"]
 # URL seeds to start crawling from
 SEEDS = [
     "https://www.tuebingen.de/en/",
     "https://www.bio.mpg.de/2923/en",
     "https://www.uni-tuebingen.de/en/",
+    "http://www.tuepedia.de",
     "https://health-nlp.com/index.html",
     "https://www.medizin.uni-tuebingen.de/en-de/startseite/",
     "https://www.my-stuwe.de/en/",
@@ -31,7 +35,6 @@ SEEDS = [
     "https://www.komoot.com/guide/210692/attractions-around-tuebingen",
     "https://hoelderlinturm.de/english/",
     "https://www.fsi.uni-tuebingen.de/en/",
-    "https://kki.fsi.uni-tuebingen.de",
     "https://www.stocherkahnfahrten.com/English/Stocherkahnrennen-English.html",
     "https://www.germany.travel/en/cities-culture/tuebingen.html",
     "https://justinpluslauren.com/things-to-do-in-tubingen-germany/",
@@ -42,10 +45,12 @@ SEEDS = [
 IGNORE_DOMAINS = [
     "github.com",
     "linkedin.com",
+    "xing.com",
     "facebook.com",
     "instagram.com",
     "twitter.com",
     "youtube.com",
+    "de.wikipedia.org",
     "wikipedia.org",
     "google.com",
     "google.de",
@@ -55,9 +60,11 @@ IGNORE_DOMAINS = [
     "spotify.com",
 ]
 # Supported languages
-LANGS = ["en", "en-GB", "en-US", "english"]
+LANGS = ["en", "eng", "en-GB", "en-US", "english"]
 # Maximum number of threads
-MAX_THREADS = 1
+MAX_THREADS = 10
+# User-Agent
+USER_AGENT = "Modern Search Engines University of Tuebingen Project Crawler (https://uni-tuebingen.de/de/262377)" 
 
 
 def get_domain(url: str) -> str:
@@ -114,6 +121,25 @@ def check_robots(url: str) -> bool:
         return True
     return rp.can_fetch("*", url)
 
+
+def get_lang(text: str) -> str:
+    """
+    Extracts the language from a text.
+
+    Parameters:
+    - `text` (str): The text to extract the language from.
+
+    Returns:
+    - `str`: The language of the text.
+
+    Example:
+    ```python
+    get_lang("Hello, world!")
+    ```
+    """
+
+    tc = textcat.TextCat()
+    return tc.guess_language(text)
 
 # List of links we have found
 ignore_links = set()
@@ -174,28 +200,46 @@ class Crawler:
                 continue
 
             try:
-                response = requests.get(link)
+                response = requests.get(link, timeout=5, headers={"User-Agent": USER_AGENT}, allow_redirects=True, stream=True, proxies=False, auth=False, cookies=False)
                 soup = BeautifulSoup(response.text, "lxml")
+                text = soup.text.lower()
 
                 # Check language in html-tag and in the link
+                def check_lang(lang):
+                    """
+                    Check if the language is supported.
+                    """
+                    print("\tchecking lang")
+                    return lang is not None and lang in LANGS
+            
+                def check_text_lang(text):
+                    """
+                    Check if the language of the text is supported.
+                    """
+                    print("\tchecking text lang")
+                    tc = textcat.TextCat()
+                    return check_lang(tc.guess_language(text))
+                
+                def check_link_lang(link):
+                    """
+                    Check if the language of the link is supported.
+                    """
+                    print("\tchecking link lang")
+                    return any([split == lang for split in link.split("/") for lang in LANGS])
+                    
                 html_lang = soup.find("html").get("lang")
                 xml_lang = soup.find("html").get("xml:lang")
+                
                 img_tags = soup.findAll("img")
                 desciption = soup.find("meta", attrs={"name": "description"})
                 desciption_content = desciption.get("content") if desciption is not None else ""
                 title = soup.find("title")
                 title_content = title.string if title is not None else ""
-                
-                if (html_lang is None and xml_lang is None and not any([split == lang for split in link.split("/") for lang in LANGS])) or (html_lang is not None and html_lang not in LANGS) or (xml_lang is not None and xml_lang not in LANGS):
-                    print(crawling_str + "language not supported: " +
-                          str(html_lang) + " " + str(xml_lang))
-                    ignore_links.add(link)
-                    continue
 
                 text = soup.text.lower()
                 alt_texts = [img.get("alt") for img in img_tags]
                 text = text + " ".join(alt_texts) + " " + str(desciption_content) + " " + str(title_content)
-                if i==1:
+                if i == 1:
                     print(f"Text: {text}")
                     print(f"Type of text: {type(text)}")
                     print("Now printing top 30 words")
@@ -203,6 +247,11 @@ class Crawler:
                     print(f"Top 30 words: {top_30}")
                     i+=1
             
+                if not check_lang(html_lang) and not check_lang(xml_lang) and not check_link_lang(link) and not check_text_lang(text):
+                    print(crawling_str + "unsupported language")
+                    ignore_links.add(link)
+                    continue
+
                 # Check if there is any of the required keywords in the text
                 if not any([keyword in text for keyword in REQUIRED_KEYWORDS]):
                     ignore_links.add(link)
