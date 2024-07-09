@@ -15,6 +15,8 @@ from concurrent.futures import ThreadPoolExecutor
 from custom_tokenizer import tokenize_data, tf_idf_vectorize, top_30_words
 ##### Language detection #####
 from nltk.classify import textcat
+##### Database #####
+import duckdb
 
 ##### Constants #####
 # Maximum size of the links
@@ -148,10 +150,15 @@ to_crawl = collections.deque(SEEDS)
 to_crawl_set = set(SEEDS)
 
 
+
 class Crawler:
-    def __init__(self, identifier: str) -> None:
+    def __init__(self, identifier: str, dbcon: duckdb.DuckDBPyConnection) -> None:
         self.identifier = identifier
+        self.cursor = dbcon.cursor()
         print(f"Initialized Crawler {self.identifier}")
+
+    def __del__(self) -> None:
+        self.cursor.close()
 
     def crawl(self) -> None:
         """
@@ -331,13 +338,17 @@ def start_crawl():
     load_state()
 
     crawlers = []
+    con = duckdb.connect("crawlies.db")
     try:
+        con.install_extension("fts")
+        con.load_extension("fts")
         with ThreadPoolExecutor(max_workers=MAX_THREADS) as executor:
             for i in range(MAX_THREADS):
-                crawler = Crawler(i)
+                crawler = Crawler(i, con)
                 crawlers.append(crawler)
                 executor.submit(crawler.crawl)
 
+        con.close()
         save_state()
 
         print("Found", len(found_links), "links")
@@ -347,9 +358,13 @@ def start_crawl():
     except KeyboardInterrupt:
         try:
             save_state()
+            con.close()
             sys.exit(130)
         except SystemExit:
+            con.close()
             os._exit(130)
+    except Exception as e:
+        con.close()
 
 
 if __name__ == "__main__":
