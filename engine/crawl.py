@@ -11,6 +11,8 @@ from urllib.parse import urlparse  # Parsing URLs
 import urllib.robotparser  # For checking robots.txt
 ##### Threading #####
 from concurrent.futures import ThreadPoolExecutor
+##### Tokenization #####
+from custom_tokenizer import tokenize_data, tf_idf_vectorize, top_30_words
 ##### Language detection #####
 from nltk.classify import textcat
 
@@ -163,6 +165,7 @@ class Crawler:
         """
 
         global found_links, ignore_links, to_crawl
+        i = 1
 
         while True:
             # If we have reached the maximum size, stop
@@ -226,11 +229,28 @@ class Crawler:
                     
                 html_lang = soup.find("html").get("lang")
                 xml_lang = soup.find("html").get("xml:lang")
+                
+                img_tags = soup.findAll("img")
+                desciption = soup.find("meta", attrs={"name": "description"})
+                desciption_content = desciption.get("content") if desciption is not None else ""
+                title = soup.find("title")
+                title_content = title.string if title is not None else ""
+
+                text = soup.text.lower()
+                alt_texts = [img.get("alt") for img in img_tags]
+                text = text + " ".join(alt_texts) + " " + str(desciption_content) + " " + str(title_content)
+                if i == 1:
+                    print(f"Text: {text}")
+                    print(f"Type of text: {type(text)}")
+                    print("Now printing top 30 words")
+                    top_30 = top_30_words(data=[text])
+                    print(f"Top 30 words: {top_30}")
+                    i+=1
+            
                 if not check_lang(html_lang) and not check_lang(xml_lang) and not check_link_lang(link) and not check_text_lang(text):
                     print(crawling_str + "unsupported language")
                     ignore_links.add(link)
                     continue
-
 
                 # Check if there is any of the required keywords in the text
                 if not any([keyword in text for keyword in REQUIRED_KEYWORDS]):
@@ -260,6 +280,7 @@ class Crawler:
                     found_links.add(link)
 
                 print(crawling_str + "done")
+            
             except Exception as e:
                 print(crawling_str + "error occurred", e)
                 # Do nothing if an error occurs
