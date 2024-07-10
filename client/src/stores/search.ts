@@ -6,18 +6,21 @@ export interface SearchResult {
   title: string
   url: string
   description: string
+  summary: string
 }
 
 const dummyResults: SearchResult[] = [
   {
     title: 'Dummy result',
     url: 'https://example.com',
-    description: 'This is a dummy result'
+    description: 'This is a dummy result',
+    summary: 'This is a dummy summary'
   },
   {
     title: 'Another dummy result',
-    url: 'https://example.com',
-    description: 'This is another dummy result'
+    url: 'https://uni-tuebingen.de/en',
+    description: 'This is another dummy result',
+    summary: 'This is another dummy summary'
   }
 ]
 
