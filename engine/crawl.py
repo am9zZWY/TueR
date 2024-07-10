@@ -5,6 +5,8 @@ import os
 import sys
 ##### Parsing #####
 from bs4 import BeautifulSoup  # HTML parsing
+
+from pipeline import PipelineElement
 from utils import check_robots, get_base_url
 import requests  # HTTP requests
 ##### Threading #####
@@ -74,8 +76,9 @@ to_crawl = collections.deque(SEEDS)
 to_crawl_set = set(SEEDS)
 
 
-class Crawler:
-    def __init__(self, identifier: str) -> None:
+class Crawler(PipelineElement):
+    def __init__(self, identifier: str, name) -> None:
+        super().__init__(name)
         self.identifier = identifier
         print(f"Initialized Crawler {self.identifier}")
 
