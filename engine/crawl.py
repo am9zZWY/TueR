@@ -5,10 +5,8 @@ import os
 import sys
 ##### Parsing #####
 from bs4 import BeautifulSoup  # HTML parsing
+from utils import check_robots, get_base_url
 import requests  # HTTP requests
-from urllib.parse import urlparse  # Parsing URLs
-# Robots.txt
-import urllib.robotparser  # For checking robots.txt
 ##### Threading #####
 from concurrent.futures import ThreadPoolExecutor
 ##### Tokenization #####
@@ -68,62 +66,6 @@ MAX_THREADS = 5
 USER_AGENT = "Modern Search Engines University of Tuebingen Project Crawler (https://uni-tuebingen.de/de/262377)"
 # Textcat
 TC = textcat.TextCat()
-
-
-def get_domain(url: str) -> str:
-    """
-    Extracts the domain from a URL.
-
-    Parameters:
-    - `url` (str): The URL to extract the domain from.
-
-    Returns:
-    - `str`: The domain of the URL.
-    """
-
-    return urlparse(url).netloc
-
-
-def get_base_url(url: str) -> str:
-    """
-    Extracts the base URL from a URL.
-
-    Parameters:
-    - `url` (str): The URL to extract the base URL from.
-
-    Returns:
-    - `str`: The base URL of the URL.
-    """
-
-    return urlparse(url).scheme + "://" + urlparse(url).netloc
-
-
-def check_robots(url: str) -> bool:
-    """
-    Respect robots.txt and check if we can fetch a URL.
-    For more information: http://www.robotstxt.org/robotstxt.html
-
-    Parameters:
-    - `url` (str): The URL to check.
-
-    Returns:
-    - `bool`: Whether we can fetch the URL or not.
-
-    Example:
-    ```python
-    can_fetch("https://www.tuebingen.de/en/")
-    ```
-    """
-
-    domain = get_base_url(url)
-    robots_url = domain + "/robots.txt"
-    rp = urllib.robotparser.RobotFileParser(robots_url)
-    try:
-        rp.read()
-    except:
-        return True
-    return rp.can_fetch("*", url)
-
 
 # List of links we have found
 ignore_links = set()
