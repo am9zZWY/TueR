@@ -186,17 +186,7 @@ class Crawler:
             try:
                 response = requests.get(link, timeout=5, headers={"User-Agent": USER_AGENT}, allow_redirects=True, stream=True, proxies=False, auth=False, cookies=False)
                 soup = BeautifulSoup(response.text, "lxml")
-
-                text = soup.text.lower()
-                alt_texts = [img.get("alt") for img in img_tags]
-                text = text + " ".join(alt_texts) + " " + str(desciption_content) + " " + str(title_content)
-                if i == 1:
-                    print(f"Text: {text}")
-                    print(f"Type of text: {type(text)}")
-                    print("Now printing top 30 words")
-                    top_30 = top_30_words(data=[text])
-                    print(f"Top 30 words: {top_30}")
-                    i+=1
+                text = soup.get_text().lower()
 
                 # Check if the language is supported
                 check_html_tag_lang = soup.find("html").get("lang") in LANGS
