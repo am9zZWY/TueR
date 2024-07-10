@@ -65,9 +65,10 @@ LANGS = ["en", "en-de", "eng", "en-GB", "en-US", "english"]
 # Maximum number of threads
 MAX_THREADS = 5
 # User-Agent
-USER_AGENT = "Modern Search Engines University of Tuebingen Project Crawler (https://uni-tuebingen.de/de/262377)" 
+USER_AGENT = "Modern Search Engines University of Tuebingen Project Crawler (https://uni-tuebingen.de/de/262377)"
 # Textcat
 TC = textcat.TextCat()
+
 
 def get_domain(url: str) -> str:
     """
@@ -184,7 +185,9 @@ class Crawler:
                 continue
 
             try:
-                response = requests.get(link, timeout=5, headers={"User-Agent": USER_AGENT}, allow_redirects=True, stream=True, proxies=False, auth=False, cookies=False)
+                # Crawl the website
+                response = requests.get(link, timeout=5, headers={"User-Agent": USER_AGENT}, allow_redirects=True,
+                                        stream=True, proxies=False, auth=False, cookies=False)
                 soup = BeautifulSoup(response.text, "lxml")
                 text = soup.get_text().lower()
 
@@ -193,7 +196,6 @@ class Crawler:
                 check_xml_tag_lang = soup.find("html").get("xml:lang") in LANGS
                 check_link_lang = any([split == lang for split in link.split("/") for lang in LANGS])
                 check_text_lang = TC.guess_language(text) in LANGS
-
 
                 if not check_html_tag_lang and not check_xml_tag_lang and not check_link_lang and not check_text_lang:
                     print(crawling_str + "unsupported language")
@@ -219,7 +221,8 @@ class Crawler:
                         base_url = get_base_url(response.url)
                         found_link = base_url + found_link
 
-                    if found_link not in ignore_links and found_link not in found_links and found_link not in to_crawl_set and link.startswith("http"):
+                    if found_link not in ignore_links and found_link not in found_links and found_link not in to_crawl_set and link.startswith(
+                            "http"):
                         to_crawl.append(found_link)
                         to_crawl_set.add(found_link)
 
@@ -250,7 +253,7 @@ class Crawler:
                 save_html_to_df(url=link, tokenized_text=tokenized_text)
 
                 print(crawling_str + "done")
-            
+
             except Exception as e:
                 print(crawling_str + "error occurred", e)
                 # Do nothing if an error occurs
@@ -323,7 +326,7 @@ def start_crawl():
 
 
 if __name__ == "__main__":
-    start_crawl() # in crawling, we also tokenize
+    start_crawl()  # in crawling, we also tokenize
     # TODO - seperarw crawling and tokenizing
     index_pages()
     index_df = access_index()
