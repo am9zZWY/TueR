@@ -61,7 +61,7 @@ IGNORE_DOMAINS = [
     "spotify.com",
 ]
 # Supported languages
-LANGS = ["en", "eng", "en-GB", "en-US", "english"]
+LANGS = ["en", "en-de", "eng", "en-GB", "en-US", "english"]
 # Maximum number of threads
 MAX_THREADS = 5
 # User-Agent
