@@ -48,11 +48,6 @@ const { results } = storeToRefs(searchStore)
 const loading = false
 
 const query = ref('')
-const suggestionResults = ref<string[]>([
-  'Apple',
-  'Banana',
-  'Cherry'
-])
 const search = () => {
   searchStore.search(query.value)
 }
