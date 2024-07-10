@@ -1,4 +1,5 @@
 crawler_states/*
+*.csv
 
 # Created by https://www.toptal.com/developers/gitignore/api/python,git,visualstudiocode,macos,linux
 # Edit at https://www.toptal.com/developers/gitignore?templates=python,git,visualstudiocode,macos,linux
