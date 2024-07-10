@@ -15,10 +15,11 @@ from concurrent.futures import ThreadPoolExecutor
 from custom_tokenizer import tokenize_data, tf_idf_vectorize, top_30_words
 ##### Language detection #####
 from nltk.classify import textcat
+from custom_db import *
 
 ##### Constants #####
 # Maximum size of the links
-MAX_SIZE = 1000
+MAX_SIZE = 20
 # Keywords to search for
 # They must be present in the HTML of the page
 REQUIRED_KEYWORDS = ["tübingen", "tuebingen", "tubingen", "t%C3%BCbingen"]
@@ -62,7 +63,7 @@ IGNORE_DOMAINS = [
 # Supported languages
 LANGS = ["en", "eng", "en-GB", "en-US", "english"]
 # Maximum number of threads
-MAX_THREADS = 10
+MAX_THREADS = 5
 # User-Agent
 USER_AGENT = "Modern Search Engines University of Tuebingen Project Crawler (https://uni-tuebingen.de/de/262377)" 
 
@@ -171,6 +172,7 @@ class Crawler:
             # If we have reached the maximum size, stop
             if len(found_links) >= MAX_SIZE:
                 print("max size reached")
+                print(get_overview())
                 break
 
             # Get the next link to crawl
@@ -202,6 +204,7 @@ class Crawler:
             try:
                 response = requests.get(link, timeout=5, headers={"User-Agent": USER_AGENT}, allow_redirects=True, stream=True, proxies=False, auth=False, cookies=False)
                 soup = BeautifulSoup(response.text, "lxml")
+                #print(f"Das ist soup.text: {soup.text}")
                 text = soup.text.lower()
 
                 # Check language in html-tag and in the link
@@ -230,23 +233,6 @@ class Crawler:
                 html_lang = soup.find("html").get("lang")
                 xml_lang = soup.find("html").get("xml:lang")
                 
-                img_tags = soup.findAll("img")
-                desciption = soup.find("meta", attrs={"name": "description"})
-                desciption_content = desciption.get("content") if desciption is not None else ""
-                title = soup.find("title")
-                title_content = title.string if title is not None else ""
-
-                text = soup.text.lower()
-                alt_texts = [img.get("alt") for img in img_tags]
-                text = text + " ".join(alt_texts) + " " + str(desciption_content) + " " + str(title_content)
-                if i == 1:
-                    print(f"Text: {text}")
-                    print(f"Type of text: {type(text)}")
-                    print("Now printing top 30 words")
-                    top_30 = top_30_words(data=[text])
-                    print(f"Top 30 words: {top_30}")
-                    i+=1
-            
                 if not check_lang(html_lang) and not check_lang(xml_lang) and not check_link_lang(link) and not check_text_lang(text):
                     print(crawling_str + "unsupported language")
                     ignore_links.add(link)
@@ -278,6 +264,28 @@ class Crawler:
                 # Add the link to the list of links
                 if link not in found_links and link not in ignore_links:
                     found_links.add(link)
+
+                img_tags = soup.findAll("img")
+                desciption = soup.find("meta", attrs={"name": "description"})
+                desciption_content = desciption.get("content") if desciption is not None else ""
+                title = soup.find("title")
+                title_content = title.string if title is not None else ""
+
+                alt_texts = [img.get("alt") for img in img_tags]
+                text = text + " ".join(alt_texts) + " " + str(desciption_content) + " " + str(title_content)
+
+                tokenized_text = tokenize_data(data=text)
+                if i == 1:
+                    # print(f"Text: {text}")
+                    # print(f"Type of text: {type(text)}")
+                    # print("Now printing top 30 words")
+                    # top_30 = top_30_words(data=[text])
+                    # print(f"Top 30 words: {top_30}")
+                    # i+=1
+                    print("Saving following into the Database")
+                    print(f"URL: {link}")
+                    print(f"Tokenized text: {tokenized_text}")
+                save_html_to_df(url=link, tokenized_text=tokenized_text)
 
                 print(crawling_str + "done")
             
@@ -353,4 +361,11 @@ def start_crawl():
 
 
 if __name__ == "__main__":
-    start_crawl()
+    start_crawl() # in crawling, we also tokenize
+    # TODO - seperarw crawling and tokenizing
+    index_pages()
+    index_df = access_index()
+    index_df.to_csv("inverted_index.csv")
+    save_pages()
+    
+    
