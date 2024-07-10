@@ -44,5 +44,3 @@ def top_30_words(data):
     # print(f"Summe: {X.sum(axis=0)}")
     top_30_words = sorted(zip(feature_names, X.sum(axis=0).tolist()[0]), key=lambda x: x[1], reverse=True)[:30]
     return top_30_words
-
-
