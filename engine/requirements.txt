@@ -2,6 +2,7 @@ beautifulsoup4==4.12.3
 certifi==2024.7.4
 charset-normalizer==3.3.2
 click==8.1.7
+flask==3.0.3
 idna==3.7
 joblib==1.4.2
 lxml==5.2.2
