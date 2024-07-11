@@ -7,16 +7,22 @@ from nltk.corpus import stopwords
 import re
 import nltk
 
+from custom_db import save_html_to_df
+from pipeline import PipelineElement
+
+
 def remove_punctuations(text):
     punct_tag = re.compile(r'[^\w\s]')
     text = punct_tag.sub(r'', text)
     return text
+
 
 # Removes HTML syntaxes
 def remove_html(text):
     html_tag = re.compile(r'<.*?>')
     text = html_tag.sub(r'', text)
     return text
+
 
 # Removes URL data
 def remove_url(text):
@@ -40,23 +46,25 @@ def remove_emoji(text):
     text = url_clean.sub(r'', text)
     return text
 
+
 def tokenize_plain_words(words: str):
     return words.split()
+
 
 def stem_and_remove_stopwords(words):
     # use english porterStemmer
 
     stemmer = nltk.stem.porter.PorterStemmer()
-    words = [stemmer.stem(word) for word in words if word not in stopwords.words("english")] # added stemmer
+    words = [stemmer.stem(word) for word in words if word not in stopwords.words("english")]  # added stemmer
     return words
-
 
 
 def tokenize_data(data):
     """
     Tokenizes the input data.
     """
-    pipeline = [remove_punctuations, remove_html, remove_url, remove_emoji, tokenize_plain_words, stem_and_remove_stopwords]
+    pipeline = [remove_punctuations, remove_html, remove_url, remove_emoji, tokenize_plain_words,
+                stem_and_remove_stopwords]
     for pipe in pipeline:
         data = pipe(data)
     print("We are done here in tokenizing")
@@ -72,6 +80,7 @@ def tf_idf_vectorize(data):
     # Vectorize the data
     X = vectorizer.fit_transform(data)
     return X
+
 
 def top_30_words(data):
     """
@@ -89,3 +98,27 @@ def top_30_words(data):
     print(f"Summe: {X.sum(axis=0)}")
     top_30_words = sorted(zip(feature_names, X.sum(axis=0).tolist()[0]), key=lambda x: x[1], reverse=True)[:30]
     return top_30_words
+
+
+class Tokenizer(PipelineElement):
+    def __init__(self):
+        super().__init__("Tokenizer")
+
+    def process(self, data, link):
+        """
+        Tokenizes the input data.
+        """
+
+        soup = data
+        text = soup.get_text()
+        img_tags = soup.findAll("img")
+        desciption = soup.find("meta", attrs={"name": "description"})
+        desciption_content = desciption.get("content") if desciption is not None else ""
+        title = soup.find("title")
+        title_content = title.string if title is not None else ""
+
+        alt_texts = [img.get("alt") for img in img_tags]
+        text = text + " ".join(alt_texts) + " " + str(desciption_content) + " " + str(title_content)
+
+        tokenized_text = tokenize_data(data=text)
+        save_html_to_df(url=link, tokenized_text=tokenized_text)
