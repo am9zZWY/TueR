@@ -17,10 +17,11 @@ from custom_tokenizer import tokenize_data, tf_idf_vectorize, top_30_words
 from nltk.classify import textcat
 ##### Database #####
 import duckdb
+from custom_db import *
 
 ##### Constants #####
 # Maximum size of the links
-MAX_SIZE = 1000
+MAX_SIZE = 20
 # Keywords to search for
 # They must be present in the HTML of the page
 REQUIRED_KEYWORDS = ["tübingen", "tuebingen", "tubingen", "t%C3%BCbingen"]
@@ -48,7 +49,6 @@ IGNORE_DOMAINS = [
     "github.com",
     "linkedin.com",
     "xing.com",
-    "facebook.com",
     "instagram.com",
     "twitter.com",
     "youtube.com",
@@ -62,11 +62,13 @@ IGNORE_DOMAINS = [
     "spotify.com",
 ]
 # Supported languages
-LANGS = ["en", "eng", "en-GB", "en-US", "english"]
+LANGS = ["en", "en-de", "eng", "en-GB", "en-US", "english"]
 # Maximum number of threads
-MAX_THREADS = 10
+MAX_THREADS = 5
 # User-Agent
-USER_AGENT = "Modern Search Engines University of Tuebingen Project Crawler (https://uni-tuebingen.de/de/262377)" 
+USER_AGENT = "Modern Search Engines University of Tuebingen Project Crawler (https://uni-tuebingen.de/de/262377)"
+# Textcat
+TC = textcat.TextCat()
 
 
 def get_domain(url: str) -> str:
@@ -124,25 +126,6 @@ def check_robots(url: str) -> bool:
     return rp.can_fetch("*", url)
 
 
-def get_lang(text: str) -> str:
-    """
-    Extracts the language from a text.
-
-    Parameters:
-    - `text` (str): The text to extract the language from.
-
-    Returns:
-    - `str`: The language of the text.
-
-    Example:
-    ```python
-    get_lang("Hello, world!")
-    ```
-    """
-
-    tc = textcat.TextCat()
-    return tc.guess_language(text)
-
 # List of links we have found
 ignore_links = set()
 found_links = set()
@@ -178,6 +161,7 @@ class Crawler:
             # If we have reached the maximum size, stop
             if len(found_links) >= MAX_SIZE:
                 print("max size reached")
+                print(get_overview())
                 break
 
             # Get the next link to crawl
@@ -207,54 +191,19 @@ class Crawler:
                 continue
 
             try:
-                response = requests.get(link, timeout=5, headers={"User-Agent": USER_AGENT}, allow_redirects=True, stream=True, proxies=False, auth=False, cookies=False)
+                # Crawl the website
+                response = requests.get(link, timeout=5, headers={"User-Agent": USER_AGENT}, allow_redirects=True,
+                                        stream=True, proxies=False, auth=False, cookies=False)
                 soup = BeautifulSoup(response.text, "lxml")
-                text = soup.text.lower()
+                text = soup.get_text().lower()
 
-                # Check language in html-tag and in the link
-                def check_lang(lang):
-                    """
-                    Check if the language is supported.
-                    """
-                    print("\tchecking lang")
-                    return lang is not None and lang in LANGS
-            
-                def check_text_lang(text):
-                    """
-                    Check if the language of the text is supported.
-                    """
-                    print("\tchecking text lang")
-                    tc = textcat.TextCat()
-                    return check_lang(tc.guess_language(text))
-                
-                def check_link_lang(link):
-                    """
-                    Check if the language of the link is supported.
-                    """
-                    print("\tchecking link lang")
-                    return any([split == lang for split in link.split("/") for lang in LANGS])
-                    
-                html_lang = soup.find("html").get("lang")
-                xml_lang = soup.find("html").get("xml:lang")
-                
-                img_tags = soup.findAll("img")
-                desciption = soup.find("meta", attrs={"name": "description"})
-                desciption_content = desciption.get("content") if desciption is not None else ""
-                title = soup.find("title")
-                title_content = title.string if title is not None else ""
+                # Check if the language is supported
+                check_html_tag_lang = soup.find("html").get("lang") in LANGS
+                check_xml_tag_lang = soup.find("html").get("xml:lang") in LANGS
+                check_link_lang = any([split == lang for split in link.split("/") for lang in LANGS])
+                check_text_lang = TC.guess_language(text) in LANGS
 
-                text = soup.text.lower()
-                alt_texts = [img.get("alt") for img in img_tags]
-                text = text + " ".join(alt_texts) + " " + str(desciption_content) + " " + str(title_content)
-                if i == 1:
-                    print(f"Text: {text}")
-                    print(f"Type of text: {type(text)}")
-                    print("Now printing top 30 words")
-                    top_30 = top_30_words(data=[text])
-                    print(f"Top 30 words: {top_30}")
-                    i+=1
-            
-                if not check_lang(html_lang) and not check_lang(xml_lang) and not check_link_lang(link) and not check_text_lang(text):
+                if not check_html_tag_lang and not check_xml_tag_lang and not check_link_lang and not check_text_lang:
                     print(crawling_str + "unsupported language")
                     ignore_links.add(link)
                     continue
@@ -278,7 +227,8 @@ class Crawler:
                         base_url = get_base_url(response.url)
                         found_link = base_url + found_link
 
-                    if found_link not in ignore_links and found_link not in found_links and found_link not in to_crawl_set and link.startswith("http"):
+                    if found_link not in ignore_links and found_link not in found_links and found_link not in to_crawl_set and link.startswith(
+                            "http"):
                         to_crawl.append(found_link)
                         to_crawl_set.add(found_link)
 
@@ -286,8 +236,30 @@ class Crawler:
                 if link not in found_links and link not in ignore_links:
                     found_links.add(link)
 
+                img_tags = soup.findAll("img")
+                desciption = soup.find("meta", attrs={"name": "description"})
+                desciption_content = desciption.get("content") if desciption is not None else ""
+                title = soup.find("title")
+                title_content = title.string if title is not None else ""
+
+                alt_texts = [img.get("alt") for img in img_tags]
+                text = text + " ".join(alt_texts) + " " + str(desciption_content) + " " + str(title_content)
+
+                tokenized_text = tokenize_data(data=text)
+                if i == 1:
+                    # print(f"Text: {text}")
+                    # print(f"Type of text: {type(text)}")
+                    # print("Now printing top 30 words")
+                    # top_30 = top_30_words(data=[text])
+                    # print(f"Top 30 words: {top_30}")
+                    # i+=1
+                    print("Saving following into the Database")
+                    print(f"URL: {link}")
+                    print(f"Tokenized text: {tokenized_text}")
+                save_html_to_df(url=link, tokenized_text=tokenized_text)
+
                 print(crawling_str + "done")
-            
+
             except Exception as e:
                 print(crawling_str + "error occurred", e)
                 # Do nothing if an error occurs
@@ -368,4 +340,9 @@ def start_crawl():
 
 
 if __name__ == "__main__":
-    start_crawl()
+    start_crawl()  # in crawling, we also tokenize
+    # TODO - seperarw crawling and tokenizing
+    index_pages()
+    index_df = access_index()
+    index_df.to_csv("inverted_index.csv")
+    save_pages()
