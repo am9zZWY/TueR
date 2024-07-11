@@ -22,23 +22,16 @@
 
 3. **Create a virtual environment:**
 
-   - Create a directory for your project:
-
-    ```
-    mkdir ~/.venvs/
-    cd ~/.venvs/
-    ```
-
    - Create the virtual environment:
 
     ```
-    virtualenv --python=3.11 3.11
+    virtualenv --python=3.11 .venv
     ```
 
    - Activate the virtual environment:
 
     ```
-    source ~/.venvs/3.11/bin/activate
+    source .venv/bin/activate
     ```
 
 4. **Install requirements:**
@@ -51,3 +44,13 @@
    ```
 
 5. **Start developing the project**
+
+## Usage
+
+- Run the following command to start the server:
+
+```
+python server.py
+```
+
+- Open your browser and navigate to `http://localhost:5000/` to view the application.
