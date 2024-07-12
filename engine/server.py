@@ -1,5 +1,7 @@
 from flask import Flask, jsonify, request
 
+from rank import rank
+
 app = Flask(__name__)
 
 
@@ -12,15 +14,10 @@ def hello_world():
 def search():
     query = request.args.get('query', '')
 
-    dummy_results = [
-        {"title": "First search result", "url": "http://example.com/first", "score": 0.9,
-         "summary": "This is the first search result"},
-        {"title": "Second search result", "url": "http://example.com/second", "score": 0.8,
-         "summary": "This is the second search result"},
-        {"title": query, "url": "http://example.com/third",
-         "score": 0.7, "summary": "This is the third search result"},
-    ]
-    return jsonify({"results": dummy_results})
+    # Create BOW
+    ranking = rank(query)
+
+    return jsonify({"results": ranking})
 
 
 @app.route("/site-map")
