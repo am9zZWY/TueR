@@ -133,10 +133,7 @@ def add_document_to_index(doc_id, words: list[str]):
 def index_pages():
     for index, row in pages_df.iterrows():
         page_id = row['id']
-        # Check if tokenized_text is NaN
         tokenized_text = row['tokenized_text']
-        print(type(tokenized_text), tokenized_text)
-
         add_document_to_index(page_id, tokenized_text)
 
 

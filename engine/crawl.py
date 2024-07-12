@@ -63,7 +63,8 @@ class Crawler(PipelineElement):
                                "amazon.com", "cctue.de", "spotify.com"]
         self.langs = ["en", "en-de", "eng", "en-GB", "en-US", "english"]
         self.required_keywords = ["tübingen", "tuebingen", "tubingen", "t%C3%BCbingen"]
-        self.user_agent = "Modern Search Engines University of Tuebingen Project Crawler (https://uni-tuebingen.de/de/262377)"
+        self.user_agent = ("Modern Search Engines University of Tuebingen Project Crawler ("
+                           "https://uni-tuebingen.de/de/262377)")
 
     async def fetch(self, session, url):
         headers = {
@@ -80,7 +81,6 @@ class Crawler(PipelineElement):
             return None
 
     async def process(self):
-        print("Crawler started")
         async with ClientSession() as session:
             while self.to_crawl and len(self.found_links) < self.max_size:
                 tasks = []

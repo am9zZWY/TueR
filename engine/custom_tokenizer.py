@@ -67,7 +67,6 @@ def tokenize_data(data) -> list[str]:
                 stem_and_remove_stopwords]
     for pipe in pipeline:
         data = pipe(data)
-    print("We are done here in tokenizing")
     return data
 
 

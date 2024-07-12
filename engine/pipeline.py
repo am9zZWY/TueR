@@ -20,7 +20,7 @@ class PipelineElement:
     def call_next(self, *args):
         futures = []
         for element in self.next:
-            print(f"Calling next for {self.name}: {element.name}")
+            print(f"{self.name} -> {element.name}")
             future = element.executor.submit(element.process, *args)
             futures.append(future)
         wait(futures)  # Wait for all futures to complete
