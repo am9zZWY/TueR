@@ -1,9 +1,9 @@
 # https://github.com/actions/labeler
 
 UI:
-- all:
-  - 'client/**/*'
+- changed-files:
+  - any-glob-to-any-file: 'client/*'
 
 ENGINE:
-- all:
-  - 'engine/**/*'
+- changed-files:
+  - any-glob-to-any-file: 'engine/*'
