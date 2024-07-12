@@ -1,31 +1,43 @@
-from .crawl import start_crawl
+from custom_db import upsert_page_to_index, add_title_to_index, add_snippet_to_index, load_pages
+from pipeline import PipelineElement
 
 
-class Document:
-    def __init__(self, content: str, title: str, url: str):
-        self.content = content
-        self.title = title
-        self.url = url
+class Indexer(PipelineElement):
+    """
+    Adds the data to the index.
+    """
 
-
-class Index:
     def __init__(self):
-        self.documents = []
+        super().__init__("Indexer")
 
-    def add_document(self, document: Document):
-        self.documents.append(document)
+        self._load_state()
 
-    def search(self, query: str) -> list[Document]:
-        pass
+    def process(self, data, link):
+        """
+        Indexes the input data.
+        """
 
+        soup = data
 
-class SearchEngine:
-    def __init__(self, index: Index):
-        self.index = index
+        # Title
+        title = soup.find("title")
+        title_content = title.string if title is not None else ""
 
-    def crawl(self):
-        start_crawl()
+        # Snippet or description
+        description = soup.find("meta", attrs={"name": "description"})
+        description_content = description.get("content") if description is not None else ""
 
-    def search(self, query: str) -> list[Document]:
-        # TODO: Implement search
-        pass
+        # Add more data to the index
+        upsert_page_to_index(url=link)
+        add_title_to_index(url=link, title=title_content)
+        add_snippet_to_index(url=link, snippet=description_content)
+
+        self.call_next(soup, link)
+
+    def _load_state(self):
+        """
+        Load the state of the indexer.
+        """
+
+        # TODO: Not ideal! This should be in a database
+        load_pages()

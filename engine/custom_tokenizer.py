@@ -7,7 +7,7 @@ from nltk.corpus import stopwords
 import re
 import nltk
 
-from custom_db import save_html_to_df
+from custom_db import add_tokens_to_index, upsert_page_to_index, add_title_to_index
 from pipeline import PipelineElement
 
 
@@ -112,13 +112,13 @@ class Tokenizer(PipelineElement):
         soup = data
         text = soup.get_text()
         img_tags = soup.findAll("img")
-        desciption = soup.find("meta", attrs={"name": "description"})
-        desciption_content = desciption.get("content") if desciption is not None else ""
+        description = soup.find("meta", attrs={"name": "description"})
+        description_content = description.get("content") if description is not None else ""
         title = soup.find("title")
         title_content = title.string if title is not None else ""
 
         alt_texts = [img.get("alt") for img in img_tags]
-        text = text + " ".join(alt_texts) + " " + str(desciption_content) + " " + str(title_content)
+        text = text + " ".join(alt_texts) + " " + str(description_content) + " " + str(title_content)
 
         tokenized_text = tokenize_data(data=text)
-        save_html_to_df(url=link, tokenized_text=tokenized_text)
+        add_tokens_to_index(url=link, tokenized_text=tokenized_text)
