@@ -1,0 +1,9 @@
+# https://github.com/actions/labeler
+
+UI:
+- changed-files:
+  - any-glob-to-any-file: 'client/*'
+
+ENGINE:
+- changed-files:
+  - any-glob-to-any-file: 'engine/*'

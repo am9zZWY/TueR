@@ -4,8 +4,12 @@ updates:
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "weekly"
+      interval: "daily"
   - package-ecosystem: npm
-    directory: "/"
+    directory: "/client"
     schedule:
-      interval: "weekly"
+      interval: "daily"
+  - package-ecosystem: pip
+    directory: "/engine"
+    schedule:
+      interval: "daily"
