@@ -1,0 +1,9 @@
+# https://github.com/actions/labeler
+
+CLIENT:
+- all:
+  - 'client/**/*'
+
+ENGINE:
+- all:
+  - 'engine/**/*'
