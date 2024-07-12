@@ -51,7 +51,7 @@ def tokenize_plain_words(words: str):
     return words.split()
 
 
-def stem_and_remove_stopwords(words):
+def stem_and_remove_stopwords(words) -> list[str]:
     # use english porterStemmer
 
     stemmer = nltk.stem.porter.PorterStemmer()
@@ -59,7 +59,7 @@ def stem_and_remove_stopwords(words):
     return words
 
 
-def tokenize_data(data):
+def tokenize_data(data) -> list[str]:
     """
     Tokenizes the input data.
     """
