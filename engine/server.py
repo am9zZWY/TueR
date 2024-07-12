@@ -14,7 +14,7 @@ def hello_world():
 def search():
     query = request.args.get('query', '')
 
-    # Create BOW
+    # Rank documents according to query
     ranking = rank(query)
 
     return jsonify({"results": ranking})
