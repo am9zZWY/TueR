@@ -2,10 +2,10 @@
 version: 2
 updates:
   - package-ecosystem: "github-actions"
-    directory: "/"
+    directory: "/engine"
     schedule:
-      interval: "weekly"
+      interval: "daily"
   - package-ecosystem: npm
-    directory: "/"
+    directory: "/client"
     schedule:
-      interval: "weekly"
+      interval: "daily"
