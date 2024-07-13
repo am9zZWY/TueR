@@ -204,9 +204,4 @@ if __name__ == "__main__":
 
     crawler = Crawler(con)
     crawler.process()
-    # TODO - seperarw crawling and tokenizing
-    index_pages()
-    index_df = access_index()
-    index_df.to_csv("inverted_index.csv")
     con.close()
-    save_pages()
