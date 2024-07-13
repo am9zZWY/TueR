@@ -17,6 +17,7 @@ from custom_tokenizer import tokenize_data, tf_idf_vectorize, top_30_words
 ##### Language detection #####
 from eld import LanguageDetector
 ##### Database #####
+import duckdb
 from custom_db import *
 
 ##### Constants #####
@@ -45,8 +46,11 @@ LANG_DETECTOR = LanguageDetector()
 
 
 class Crawler(PipelineElement):
-    def __init__(self):
+    def __init__(self, dbcon: duckdb.DuckDBPyConnection):
         super().__init__("Crawler")
+
+        # Initialize the duckdb connection
+        self.cursor = dbcon.cursor()
 
         # Initialize the crawler state
         self.found_links = set()
@@ -65,6 +69,9 @@ class Crawler(PipelineElement):
         self.required_keywords = ["tübingen", "tuebingen", "tubingen", "t%C3%BCbingen"]
         self.user_agent = ("Modern Search Engines University of Tuebingen Project Crawler ("
                            "https://uni-tuebingen.de/de/262377)")
+
+    def __del__(self) -> None:
+        self.cursor.close()
 
     async def fetch(self, session, url):
         headers = {
@@ -191,10 +198,10 @@ class Crawler(PipelineElement):
 
 # IMPORTANT: Please use main.py instead of this file
 if __name__ == "__main__":
-    crawler = Crawler()
+    con = duckdb.connect("crawlies.db")
+    con.install_extension("fts")
+    con.load_extension("fts")
+
+    crawler = Crawler(con)
     crawler.process()
-    # TODO - seperarw crawling and tokenizing
-    index_pages()
-    index_df = access_index()
-    index_df.to_csv("inverted_index.csv")
-    save_pages()
+    con.close()
