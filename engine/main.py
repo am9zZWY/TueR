@@ -12,6 +12,8 @@ from custom_tokenizer import Tokenizer
 # Async
 import asyncio
 
+from index import Indexer
+
 MAX_THREADS = 10
 
 if __name__ == "__main__":
@@ -27,17 +29,24 @@ if __name__ == "__main__":
             crawler.max_size = 1000
             crawler.add_executor(executor)
 
+            indexer = Indexer()
+            indexer.add_executor(executor)
+
             tokenizer = Tokenizer()
             tokenizer.add_executor(executor)
 
             # Add the pipeline elements
-            crawler.add_next(tokenizer)
+            crawler.add_next(indexer)
+            indexer.add_next(tokenizer)
 
             # Start the pipeline
             asyncio.run(crawler.process())
     except (KeyboardInterrupt, SystemExit):
         print("Exiting...")
         crawler.save_state()
+        index_pages()
+        index_df = access_index()
+        index_df.to_csv("inverted_index.csv")
         con.close()
         print("State saved")
 
