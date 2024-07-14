@@ -1,4 +1,4 @@
-from concurrent.futures import ThreadPoolExecutor, wait
+import threading
 
 
 class PipelineElement:
@@ -6,6 +6,8 @@ class PipelineElement:
         self.name = name
         self.next = []
         self.executor = None
+        self.tasks = []
+        self.shutdown_flag = threading.Event()
         print(f"Initialized {self.name}")
 
     def add_executor(self, executor):
@@ -14,13 +16,18 @@ class PipelineElement:
     def process(self, *args):
         raise NotImplementedError
 
+    def save_state(self):
+        pass
+
     def add_next(self, next_element):
         self.next.append(next_element)
 
     def call_next(self, *args):
-        futures = []
         for element in self.next:
-            print(f"{self.name} -> {element.name}")
-            future = element.executor.submit(element.process, *args)
-            futures.append(future)
-        wait(futures)  # Wait for all futures to complete
+            self.tasks.append(self.executor.submit(element.process, *args))
+
+    def shutdown(self):
+        self.shutdown_flag.set()
+
+    def is_shutdown(self):
+        return self.shutdown_flag.is_set()

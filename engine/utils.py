@@ -1,5 +1,5 @@
 import urllib
-from urllib.parse import urlparse  # Parsing URLs
+from urllib.parse import urlparse, urljoin  # Parsing URLs
 # Robots.txt
 import urllib.robotparser  # For checking robots.txt
 
@@ -18,6 +18,20 @@ def get_domain(url: str) -> str:
     return urlparse(url).netloc
 
 
+def get_full_url(base_url, relative_url):
+    """
+    Converts a relative URL to a full URL based on the base URL.
+
+    Parameters:
+    - `base_url` (str): The base URL.
+    - `relative_url` (str): The relative URL to convert.
+
+    Returns:
+    - `str`: The full URL.
+    """
+    return urljoin(base_url, relative_url)
+
+
 def get_base_url(url: str) -> str:
     """
     Extracts the base URL from a URL.
@@ -28,8 +42,8 @@ def get_base_url(url: str) -> str:
     Returns:
     - `str`: The base URL of the URL.
     """
-
-    return urlparse(url).scheme + "://" + urlparse(url).netloc
+    parsed_url = urlparse(url)
+    return f"{parsed_url.scheme}://{parsed_url.netloc}"
 
 
 def check_robots(url: str) -> bool:
