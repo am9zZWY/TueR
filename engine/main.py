@@ -18,15 +18,15 @@ MAX_THREADS = 10
 
 if __name__ == "__main__":
     con = duckdb.connect("crawlies.db")
-    try:
-        # Database setup
-        con.install_extension("fts")
-        con.load_extension("fts")
+    # Database setup
+    con.install_extension("fts")
+    con.load_extension("fts")
 
-        # Initialize the pipeline
-        with ThreadPoolExecutor(max_workers=MAX_THREADS) as executor:
+    # Initialize the pipeline
+    with ThreadPoolExecutor(max_workers=MAX_THREADS) as executor:
+        try:
             crawler = Crawler(con)
-            crawler.max_size = 1000
+            crawler.max_size = 100
             crawler.add_executor(executor)
 
             indexer = Indexer()
@@ -41,14 +41,14 @@ if __name__ == "__main__":
 
             # Start the pipeline
             asyncio.run(crawler.process())
-    except (KeyboardInterrupt, SystemExit):
-        print("Exiting...")
-        crawler.save_state()
-        index_pages()
-        index_df = access_index()
-        index_df.to_csv("inverted_index.csv")
-        con.close()
-        print("State saved")
+        except (KeyboardInterrupt, SystemExit):
+            print("Interrupted")
+            crawler.save_state()
+            index_pages()
+            index_df = access_index()
+            index_df.to_csv("inverted_index.csv")
+            con.close()
+            print("State saved")
 
     index_pages()
     index_df = access_index()

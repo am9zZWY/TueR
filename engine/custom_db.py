@@ -165,7 +165,11 @@ def load_pages() -> pd.DataFrame:
         print("No pages found")
         return pages_df
 
-    pages_df = pd.read_csv("pages.csv", header=0)
+    try:
+        pages_df = pd.read_csv("pages.csv", header=0)
+    except pd.errors.EmptyDataError:
+        print("No pages found")
+        return pages_df
 
     # Convert the tokenized_text column to a list of lists
     pages_df['tokenized_text'] = pages_df['tokenized_text'].apply(eval)

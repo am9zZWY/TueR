@@ -98,6 +98,9 @@ class Crawler(PipelineElement):
                 await asyncio.gather(*tasks)
 
     async def _handle_link(self, session, link):
+        if len(self.found_links) >= self.max_size:
+            return
+
         crawling_str = f"Crawler crawling {link}: "
 
         if not link.startswith("http"):
