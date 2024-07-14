@@ -103,7 +103,7 @@ class Tokenizer(PipelineElement):
     def __init__(self):
         super().__init__("Tokenizer")
 
-    def process(self, data, link):
+    async def process(self, data, link):
         """
         Tokenizes the input data.
         """
@@ -121,3 +121,5 @@ class Tokenizer(PipelineElement):
 
         tokenized_text = tokenize_data(data=text)
         add_tokens_to_index(url=link, tokenized_text=tokenized_text)
+
+        print(f"Tokenized text for {link}")

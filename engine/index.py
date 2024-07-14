@@ -12,7 +12,7 @@ class Indexer(PipelineElement):
 
         self._load_state()
 
-    def process(self, data, link):
+    async def process(self, data, link):
         """
         Indexes the input data.
         """
@@ -32,7 +32,9 @@ class Indexer(PipelineElement):
         add_title_to_index(url=link, title=title_content)
         add_snippet_to_index(url=link, snippet=description_content)
 
-        self.call_next(soup, link)
+        print(f"Indexed {link}")
+        if not self.is_shutdown():
+            await self.call_next(soup, link)
 
     def _load_state(self):
         """
