@@ -1,3 +1,5 @@
+#!.venv/bin/python
+
 """
 Pipeline for Crawling, Tokenizing, and Indexing
 """
