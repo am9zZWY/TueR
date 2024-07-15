@@ -233,32 +233,12 @@ class Crawler(PipelineElement):
         # Handle links
         await self._handle_links(soup, url)
 
-        # Handle buttons
-        #await self._handle_dynamic_content(url)
-
         if url not in self.urls_crawled and url not in self.ignore_links:
             self.urls_crawled.add(url)
 
         logging.info(f"Finished crawling {url}. Total: {len(self.urls_crawled)} links.")
         if not self.is_shutdown():
             await self.call_next(soup, url)
-
-    async def _handle_dynamic_links(self, page: Page, url: str):
-        """
-        Handles the links on a page using Playwright.
-        Args:
-            page:
-            url:
-
-        Returns:
-
-        """
-        try:
-            content = await page.content()
-            soup = BeautifulSoup(content, "lxml")
-            await self._handle_links(soup, url)
-        except Exception as e:
-            log_error(f"Error handling links on {url}: {e}")
 
     async def _handle_links(self, soup, url):
         """
@@ -308,68 +288,6 @@ class Crawler(PipelineElement):
                 self.to_crawl_queue.append(found_link)
                 self.to_crawl_set.add(found_link)
 
-    async def _handle_dynamic_content(self, url: str):
-        """
-        Handles dynamic content on a page. This is useful for websites that require JavaScript rendering.
-        Args:
-            url:
-
-        Returns:
-
-        """
-        try:
-            await self._fetch_with_playwright(url, [self._handle_dynamic_buttons])
-            logging.info(f"Finished handling dynamic content on {url}. Total: {len(self.urls_crawled)} links.")
-        except Exception as e:
-            log_error(f"Error handling dynamic content: {e}")
-
-    async def _handle_dynamic_buttons(self, page: Page, url: str, ignore_names=None):
-        if ignore_names is None:
-            ignore_names = ['search', 'submit', 'login', 'register', 'sign in', 'sign up', 'accept', 'close', 'agree']
-        try:
-            buttons = await page.query_selector_all("button:visible:not(:disabled)")
-            if not buttons:
-                return
-            logging.info(f"Found {len(buttons)} clickable buttons on {url}")
-
-            for button_index, button in enumerate(buttons):
-                if self.is_shutdown():
-                    logging.info("Shutdown signal received during button handling.")
-                    return
-                try:
-                    if page.is_closed():
-                        logging.info("Page was closed, stopping button handling.")
-                        return
-
-                    await button.scroll_into_view_if_needed()
-                    button_text = await button.text_content()
-                    if any(ignore_name.lower() in button_text.lower() for ignore_name in ignore_names):
-                        continue
-
-                    try:
-                        async with page.expect_navigation(wait_until="networkidle", timeout=5000):
-                            await button.click(timeout=5000)
-                    except PlaywrightTimeoutError:
-                        log_error(f"Navigation timeout after clicking button {button_index} on {url}")
-                        continue
-                    except TargetClosedError:
-                        log_error(f"Page was closed while clicking button {button_index} on {url}")
-                        return
-
-                    new_content = await page.content()
-                    soup = BeautifulSoup(new_content, "lxml")
-                    await self._handle_links(soup, url)
-
-                except TargetClosedError:
-                    log_error(f"Page was closed while handling button {button_index} on {url}")
-                    return
-                except Exception as e:
-                    log_error(f"Error handling button {button_index} on {url}: {e}")
-        except TargetClosedError:
-            log_error(f"Page was closed during button discovery on {url}")
-        except Exception as e:
-            log_error(f"Error during button discovery on {url}: {e}")
-
     async def _fetch(self, session, url: str) -> str or None:
         """
         Fetches the content of a URL using the given session.
@@ -400,51 +318,6 @@ class Crawler(PipelineElement):
             except Exception as e:
                 log_error(f"Error fetching {url}: {e}")
             return None
-
-    async def _fetch_with_playwright(self, url: str, callbacks: list[callable] = None):
-        max_retries = self.max_retries
-        retry_delay = self.retry_delay
-
-        for attempt in range(max_retries):
-            if self.is_shutdown():
-                logging.info("Shutdown signal received before starting fetch.")
-                return
-
-            logging.info(f"Fetching {url} with playwright (attempt {attempt + 1}/{max_retries})" if attempt > 0
-                         else f"Fetching {url} with playwright")
-
-            try:
-                async with async_playwright() as p:
-                    browser = await p.chromium.launch(headless=True)
-                    try:
-                        page = await browser.new_page()
-                        try:
-                            await page.goto(url, wait_until='networkidle', timeout=30000)
-
-                            if self.is_shutdown():
-                                logging.info("Shutdown signal received after page load.")
-                                return
-
-                            if callbacks:
-                                for callback in callbacks:
-                                    await callback(page, url)
-
-                            return  # Exit after successful fetch
-                        finally:
-                            await page.close()
-                    finally:
-                        await browser.close()
-            except Exception as e:
-                log_error(f"Error fetching {url} with playwright (attempt {attempt + 1}/{max_retries}): {e}")
-                if attempt == max_retries - 1:
-                    log_error(f"Failed to process {url} after {max_retries} attempts.")
-                    return
-                # Exponential wait time
-                await asyncio.sleep(retry_delay * (2 ** attempt))
-
-            if self.is_shutdown():
-                logging.info("Shutdown signal received during retry delay.")
-                return
 
     def save_state(self):
         """
