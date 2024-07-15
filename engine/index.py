@@ -1,3 +1,5 @@
+import logging
+
 from custom_db import upsert_page_to_index, add_title_to_index, add_snippet_to_index, load_pages
 from pipeline import PipelineElement
 
@@ -17,6 +19,10 @@ class Indexer(PipelineElement):
         Indexes the input data.
         """
 
+        if data is None:
+            logging.info(f"Failed to index {link} because the data was empty.")
+            return
+
         soup = data
 
         # Title
@@ -32,7 +38,7 @@ class Indexer(PipelineElement):
         add_title_to_index(url=link, title=title_content)
         add_snippet_to_index(url=link, snippet=description_content)
 
-        print(f"Indexed {link}")
+        logging.info(f"Indexed {link}")
         if not self.is_shutdown():
             await self.call_next(soup, link)
 
