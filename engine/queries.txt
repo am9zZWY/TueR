@@ -1,2 +1,41 @@
-1	tübingen attractions
-2	food and drinks
+1   tübingen
+2   tübingen university
+3   tübingen attractions
+4   food and drinks
+5   tübingen weather
+6   tübingen hotels
+7   tübingen traditional food
+8   tübingen coffee shops
+9   tübingen nightlife spots
+10  tübingen museums
+11  tübingen castles
+12  tübingen outdoor activities
+13  tübingen nightlife
+14  tübingen markets
+15  tübingen shopping centers
+16  tübingen local products
+17  Best cafes in Tübingen for students
+18  Upcoming events at the University of Tübingen
+19  History of Tübingen's old town
+20  Popular hiking trails near Tübingen
+21  Tübingen student housing options
+22  Vegan and vegetarian restaurants in Tübingen
+23  Cultural activities in Tübingen
+24  Tübingen public transportation map
+25  University of Tübingen research departments
+26  Tübingen nightlife spots
+27  Bookstores in Tübingen
+28  Tübingen local farmers' markets
+29  Tübingen weather forecast
+30  Student discounts in Tübingen
+31  Tübingen library hours and services
+32  Language exchange programs in Tübingen
+33  Top tourist attractions in Tübingen
+34  Cycling routes in Tübingen
+35  Tübingen sports clubs and gyms
+36  Tübingen local festivals and fairs
+37  Best places to study in Tübingen
+38  Tübingen historical landmarks
+39  Tübingen university application process
+40  Local art galleries in Tübingen
+41  Tübingen second-hand stores
