@@ -2,13 +2,12 @@
 import asyncio
 import collections  # For deque
 import json
-import os
-import sys
 ##### Parsing #####
 from bs4 import BeautifulSoup  # HTML parsing
+import aiohttp
 from aiohttp import ClientSession
-from utils import check_robots, get_base_url
-import requests  # HTTP requests
+from playwright.async_api import async_playwright
+from utils import check_robots, get_base_url, get_full_url
 ##### Threading #####
 from pipeline import PipelineElement
 from concurrent.futures import ThreadPoolExecutor
@@ -114,9 +113,6 @@ class Crawler(PipelineElement):
 
     def __del__(self) -> None:
         self.cursor.close()
-
-        # Internal state
-        self._page_count = 0
 
     @property
     def user_agent(self):

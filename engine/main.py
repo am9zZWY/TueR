@@ -1,6 +1,7 @@
 """
 Pipeline for Crawling, Tokenizing, and Indexing
 """
+import signal
 from concurrent.futures import ThreadPoolExecutor
 import asyncio
 import nest_asyncio
