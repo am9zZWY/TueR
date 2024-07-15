@@ -69,13 +69,17 @@ def tokenize_data(data) -> list[str]:
         data = pipe(data)
     return data
 
-
+# Following problem: TFIDF vectorizer nimmt einen ganzen plain text und tokenized ihn dann selbst. Wir haben aber schon fertige tokenized sachen.
+# Damit wir den datentypen nicht hin und her und wir unnötig das leben komolziert machen, müssen wir viele steps wie tf idf iund tokenizing direkt nach dem crawlen machen
+# ist zwar in der pipeline nicht ganz so schön aber sonst müssen wir vieles doppelt machen und abspeichern
+# https://scikit-learn.org/stable/modules/generated/sklearn.feature_extraction.text.TfidfVectorizer.html
 def tf_idf_vectorize(data):
     """
     Vectorizes the input data using the TF-IDF algorithm.
     """
     # Create the vectorizer
-    vectorizer = TfidfVectorizer(tokenizer=tokenize_data, stop_words="english")
+    # vectorizer = TfidfVectorizer(tokenizer=tokenize_data, stop_words="english") # hier müssen wir schauen was wir für tokenizer machen
+    vectorizer = TfidfVectorizer()
     # Vectorize the data
     X = vectorizer.fit_transform(data)
     return X
