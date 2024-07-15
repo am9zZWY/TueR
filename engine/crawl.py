@@ -2,13 +2,12 @@
 import asyncio
 import collections  # For deque
 import json
-import os
-import sys
 ##### Parsing #####
 from bs4 import BeautifulSoup  # HTML parsing
+import aiohttp
 from aiohttp import ClientSession
-from utils import check_robots, get_base_url
-import requests  # HTTP requests
+from playwright.async_api import async_playwright
+from utils import check_robots, get_base_url, get_full_url
 ##### Threading #####
 from pipeline import PipelineElement
 from concurrent.futures import ThreadPoolExecutor
@@ -84,15 +83,13 @@ class Crawler(PipelineElement):
     def __del__(self) -> None:
         self.cursor.close()
 
+    @property
+    def user_agent(self):
+        return self.user_agents[self._page_count % len(self.user_agents)]
+
     async def fetch(self, session, url):
-        headers = {
-            "User-Agent": self.user_agent,
-            "Accept-Language": "en-US,en;q=0.9,de;q=0.8",
-            "Accept-Encoding": "gzip, deflate, br",
-            "Connection": "keep-alive",
-        }
         try:
-            async with session.get(url, timeout=5, headers=headers) as response:
+            async with session.get(url, timeout=5, headers=self.headers) as response:
                 return await response.text()
         except Exception as e:
             print(f"Error fetching {url}: {e}")
