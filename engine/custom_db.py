@@ -6,12 +6,12 @@ from collections import defaultdict
 
 # Create a DataFrame to store HTML pages
 headers = ['id', 'url', 'title', 'snippet', 'tokenized_text']
-pages_df = pd.DataFrame({
-    'id': pd.Series(dtype='int'),
-    'url': pd.Series(dtype='str'),
-    'title': pd.Series(dtype='str'),
-    'snippet': pd.Series(dtype='str'),
-    'tokenized_text': pd.Series(dtype='object')
+pages_df = pd.DataFrame(columns=headers).astype({
+    'id': 'int',
+    'url': 'str',
+    'title': 'str',
+    'snippet': 'str',
+    'tokenized_text': 'object'
 })
 inverted_index = defaultdict(list)
 
@@ -140,6 +140,12 @@ def index_pages():
 def access_index():
     index_df = pd.DataFrame(list(inverted_index.items()), columns=['word', 'doc_ids'])
     return index_df
+
+
+def get_page_by_id(page_id: int):
+    global pages_df
+    page = pages_df[pages_df['id'] == page_id]
+    return page
 
 
 def save_pages() -> None:
