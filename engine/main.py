@@ -1,9 +1,10 @@
 #!.venv/bin/python
+# -*- coding: utf-8 -*-
 
-"""
-Pipeline for Crawling, Tokenizing, and Indexing
-"""
-import signal
+import sys
+# Parse the command line arguments
+import argparse
+# Asynchronous programming
 from concurrent.futures import ThreadPoolExecutor
 import asyncio
 import nest_asyncio
@@ -26,6 +27,8 @@ logging.basicConfig(
 
 # Threading
 MAX_THREADS = 10
+ENGINE_NAME = "TüR"
+
 # Patch asyncio to allow nested event loops
 nest_asyncio.apply()
 
@@ -34,27 +37,31 @@ con = duckdb.connect("crawlies.db")
 con.install_extension("fts")
 con.load_extension("fts")
 
-# Initialize the pipeline elements
-crawler = Crawler(con)
-crawler.max_size = 1000
-indexer = Indexer()
-tokenizer = Tokenizer()
 
-# Add the pipeline elements
-crawler.add_next(indexer)
-indexer.add_next(tokenizer)
+async def crawl():
+    """
+    Start the crawling, tokenizing, and indexing pipeline
+    Returns:
 
+    """
 
-def signal_handler(signum, frame):
-    logging.info("Interrupt received, shutting down... Please wait. This may take a few seconds.")
-    for element in [crawler, indexer, tokenizer]:
-        element.shutdown()
+    # Initialize the pipeline elements
+    crawler = Crawler(con)
+    crawler.max_size = 1000
+    indexer = Indexer()
+    tokenizer = Tokenizer()
 
+    # Add the pipeline elements
+    crawler.add_next(indexer)
+    indexer.add_next(tokenizer)
 
-signal.signal(signal.SIGINT, signal_handler)
+    def signal_handler(signum, frame):
+        logging.info("Interrupt received, shutting down... Please wait. This may take a few seconds.")
+        for element in [crawler, indexer, tokenizer]:
+            element.shutdown()
 
+    signal.signal(signal.SIGINT, signal_handler)
 
-async def main():
     # Initialize the pipeline
     with ThreadPoolExecutor(max_workers=MAX_THREADS) as executor:
         # Add the executor to the pipeline elements
@@ -90,5 +97,35 @@ async def main():
     logging.info("State saved")
 
 
+def parse_query(filepath) -> list[str]:
+    with open(filepath, "r") as file:
+        queries = file.readlines()
+    return queries
+
+
+def main():
+    try:
+        # Parse the command line arguments
+        parser = argparse.ArgumentParser(description=f"Find anything with {ENGINE_NAME}!")
+        parser.add_argument("-q", "--queries", help="Queries file", default="queries.txt", type=str, required=False)
+        parser.add_argument("-c", "--crawl", help="Crawl the website", action="store_true", required=False)
+        parser.add_argument("-s", "--server", help="Run the server", action="store_true", required=False)
+
+        args = parser.parse_args()
+
+        # Start the pipeline
+        if args.crawl:
+            asyncio.run(crawl())
+        elif args.server:
+            print("Starting the server...")
+        else:
+            parser.print_help()
+
+    except argparse.ArgumentError as e:
+        print(f"An error occurred while parsing the command line arguments: {str(e)}", file=sys.stderr)
+    except Exception as e:
+        print(f"An error occurred: {str(e)}", file=sys.stderr)
+
+
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()

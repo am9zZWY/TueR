@@ -1,62 +1,75 @@
-import re
 import math
-from typing import List
+from collections import Counter, defaultdict
+from functools import lru_cache
 
 import numpy as np
+from custom_db import get_tokens, load_pages, get_page_by_id
 
-from custom_db import get_tokens, load_pages
+load_pages()
+
+print("Getting tokens...")
+tokens = get_tokens()
 
 
-def voc(tokens: list[list[str]]) -> list[str]:
+@lru_cache(maxsize=None)
+def BOW() -> list[str]:
     """
     Create a vocabulary from a list of tokens.
     """
+    global tokens
     return sorted(set([word for doc in tokens for word in doc]))
 
 
-def TF(tokens: list[list[str]]) -> list[list[int]]:
+bow = BOW()
+
+
+def TF() -> np.ndarray:
     """
     Turn a corpus of arbitrary texts into term-frequency weighted BOW vectors.
     """
+    global tokens, bow
 
-    # Create BOW
-    bow = voc(tokens)
+    # Create a dictionary for faster lookups
+    bow_dict = {word: idx for idx, word in enumerate(bow)}
 
-    # BOW vectors
-    bow_vectors = [[]] * len(tokens)
-    # Iterate the corpus
-    for index, doc in enumerate(tokens):
-        # Create vector the size of BOW
-        bow_vectors[index] = [0] * len(bow)
-        # Iterate the documents
-        for sent in doc:
-            for word in sent.split():
-                # Find the cleaned word in the BOW and count up the frequency
-                bow_vectors[index][bow.index(word)] += 1
+    # Precompute word frequencies for each document
+    doc_word_counts = [Counter(doc) for doc in tokens]
+
+    # Create BOW vectors using NumPy
+    bow_vectors = np.zeros((len(tokens), len(bow)), dtype=int)
+
+    for doc_idx, word_counts in enumerate(doc_word_counts):
+        for word, count in word_counts.items():
+            if word in bow_dict:
+                bow_vectors[doc_idx, bow_dict[word]] = count
 
     return bow_vectors
 
 
-def IDF(tokens: list[list[str]]):
+print("Getting TF...")
+tf = TF()
+
+
+def IDF():
     """
     Estimate inverse document frequencies based on a corpus of documents.
     """
+    global tokens
 
-    return np.array([math.log(len(tokens) / sum(col)) for col in zip(*TF(tokens))])
+    return np.array([math.log(len(tokens) / sum(col)) for col in zip(*tf)])
 
 
-def bm25(tokens: list[list[str]], query: str, k1=1.5, b=0.75):
+print("Getting IDF...")
+idf = IDF()
+
+print("Ready!")
+
+
+def bm25(query: str, k1=1.5, b=0.75):
     """
     Rank documents by BM25.
     """
-
-    bow = voc(tokens)
-
-    # Create the IDF vector
-    idf = IDF(tokens)
-
-    # Create the TF matrix
-    tf = TF(tokens)
+    global tokens, tf, idf, bow
 
     # Create the query vector
     query_vector = [0] * len(bow)
@@ -72,14 +85,27 @@ def bm25(tokens: list[list[str]], query: str, k1=1.5, b=0.75):
             score += idf[i] * (tf[index][i] * (k1 + 1)) / (tf[index][i] + k1 * (1 - b + b * len(doc) / len(tokens)))
         scores.append(score)
 
-    # Add document IDs to the scores
-    scores = list(zip(range(len(tokens)), scores))
-    scores = sorted(scores, key=lambda x: x[1], reverse=True)
+    # Map document ID to document with title, URL, and snippet
+    ranking = []
+    for index, score in enumerate(scores):
+        doc = get_page_by_id(index)
 
-    return scores
+        title = str(doc['title'].values[0]) if not doc.empty else ""
+        url = str(doc['url'].values[0]) if not doc.empty else ""
+        snippet = str(doc['snippet'].values[0]) if not doc.empty else ""
+
+        result = {
+            "id": index,
+            "title": title,
+            "url": url,
+            "description": snippet if snippet else "",
+            "summary": "",
+            "score": score
+        }
+        ranking.append(result)
+
+    return ranking
 
 
 def rank(query):
-    load_pages()
-    tokens = get_tokens()
-    return bm25(tokens, query)
+    return bm25(query)
