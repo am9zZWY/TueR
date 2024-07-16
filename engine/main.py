@@ -5,11 +5,12 @@ import sys
 # Parse the command line arguments
 import argparse
 # Asynchronous programming
-import signal
 from concurrent.futures import ThreadPoolExecutor
 import asyncio
 import nest_asyncio
-
+import signal
+# Logging
+import logging
 # Database
 import duckdb
 # Pipeline
@@ -18,9 +19,15 @@ from custom_db import index_pages, access_index, save_pages
 from custom_tokenizer import Tokenizer
 from index import Indexer
 
-# Constants
+# Logging setup
+logging.basicConfig(
+    format='%(asctime)s %(levelname)-8s %(message)s',
+    level=logging.INFO,
+    datefmt='%Y-%m-%d %H:%M:%S')
+
+# Threading
 MAX_THREADS = 10
-ENGINE_NAME = "NeckarNavi"
+ENGINE_NAME = "TüR"
 
 # Patch asyncio to allow nested event loops
 nest_asyncio.apply()
@@ -49,7 +56,7 @@ async def crawl():
     indexer.add_next(tokenizer)
 
     def signal_handler(signum, frame):
-        print("Interrupt received, shutting down... Please wait")
+        logging.info("Interrupt received, shutting down... Please wait. This may take a few seconds.")
         for element in [crawler, indexer, tokenizer]:
             element.shutdown()
 
@@ -67,7 +74,7 @@ async def crawl():
         try:
             await crawler.process()
         except Exception as e:
-            print(f"An error occurred: {e}")
+            logging.info(f"An error occurred: {e}")
         finally:
             # Ensure states are saved even if an exception occurs
             for element in [crawler, indexer, tokenizer]:
@@ -77,7 +84,7 @@ async def crawl():
             index_df = access_index()
             index_df.to_csv("inverted_index.csv")
             con.close()
-            print("State saved")
+            logging.info("State saved")
 
     # Save the state+
     for element in [crawler, indexer, tokenizer]:
@@ -87,7 +94,7 @@ async def crawl():
     index_df = access_index()
     index_df.to_csv("inverted_index.csv")
     con.close()
-    print("State saved")
+    logging.info("State saved")
 
 
 def parse_query(filepath) -> list[str]:

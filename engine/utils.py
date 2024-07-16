@@ -71,3 +71,29 @@ def check_robots(url: str) -> bool:
     except:
         return True
     return rp.can_fetch("*", url)
+
+
+def safe_join(items):
+    """
+    Safely joins a list of items into a string, separating them with a space.
+    If an item is None, it is skipped.
+
+    Args:
+        items:
+
+    Returns:
+
+    """
+    return " ".join(str(item) for item in items if item is not None)
+
+
+def safe_str(item):
+    """
+    Safely converts an item to a string. If the item is None, an empty string is returned.
+    Args:
+        item:
+
+    Returns:
+
+    """
+    return str(item) if item is not None else ""
