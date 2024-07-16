@@ -1,21 +1,19 @@
-##### General #####
+# General
 import asyncio
 import collections  # For deque
 import json
-##### Parsing #####
+# Parsing
 from bs4 import BeautifulSoup  # HTML parsing
-import aiohttp
-from aiohttp import ClientSession
-from playwright.async_api import async_playwright
+from aiohttp import ClientSession, TCPConnector, ClientError
 from utils import check_robots, get_base_url, get_full_url
-##### Threading #####
+# Threading
 from pipeline import PipelineElement
 from concurrent.futures import ThreadPoolExecutor
-##### Tokenization #####
+# Tokenization
 from custom_tokenizer import tokenize_data, tf_idf_vectorize, top_30_words
-##### Language detection #####
+# Language detection
 from eld import LanguageDetector
-##### Database #####
+# Database
 import duckdb
 from custom_db import *
 
