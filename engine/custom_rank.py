@@ -1,5 +1,7 @@
 import pandas as pd
-from custom_tokenizer import tokenize_data, tf_idf_vectorize
+
+from custom_db import get_doc_by_id
+from custom_tokenizer import tokenize_data
 from sklearn.feature_extraction.text import TfidfVectorizer
 def preprocess_query(Q):
     tokenized_query = tokenize_data(Q)
@@ -89,13 +91,29 @@ def rank_documents(subset_D, Q, X):
     
     # Rank the documents by the summed TF-IDF values in descending order
     ranked_docs = filtered_X.sort_values(by='sum_tfidf', ascending=False)
-    
-    return ranked_docs
-            
-            
-            
-        
-    
+
+    # Map document ID to document with title, URL, and snippet
+    ranking = []
+    for index, ranked_doc in ranked_docs.iterrows():
+        score = ranked_doc['sum_tfidf']
+
+        doc = get_doc_by_id(index)
+        title = str(doc['title'].values[0]) if not doc.empty else ""
+        url = str(doc['url'].values[0]) if not doc.empty else ""
+        snippet = str(doc['snippet'].values[0]) if not doc.empty else ""
+
+        result = {
+            "id": index,
+            "title": title,
+            "url": url,
+            "description": snippet if snippet else "",
+            "summary": "",
+            "score": score
+        }
+        ranking.append(result)
+
+    return ranking
+
 
 query = "max animal future"
 docs = find_documents(query)
@@ -104,5 +122,4 @@ print(f"Found {len(docs)} documents, they look like this: {docs}")
 print(f"Result: {generate_tf_idf_matrix('engine/pages.csv')}")
 
 ranked_docs = rank_documents(docs, query, X)
-best_20_docs = ranked_docs.head(20).index + 1
-print(f"Best 20 docs: {best_20_docs}")
+print(f"Best 20 docs: {ranked_docs[:20]}")

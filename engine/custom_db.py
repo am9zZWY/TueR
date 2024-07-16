@@ -153,6 +153,12 @@ def save_pages() -> None:
     pages_df.to_csv("pages.csv", index=False, header=headers)
 
 
+def get_doc_by_id(page_id: int):
+    global pages_df
+    page = pages_df[pages_df['id'] == page_id]
+    return page
+
+
 def load_pages() -> pd.DataFrame:
     """
     Load the pages DataFrame from a CSV file.
@@ -177,3 +183,6 @@ def load_pages() -> pd.DataFrame:
 
     logging.info("Loaded pages")
     return pages_df
+
+
+load_pages()
