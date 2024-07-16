@@ -1,7 +1,7 @@
 from flask import Flask, jsonify, request
 from flask_cors import CORS, cross_origin
 
-from rank import rank
+from custom_rank import rank
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
