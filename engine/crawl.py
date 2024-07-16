@@ -4,13 +4,10 @@ import collections  # For deque
 import json
 # Parsing
 from bs4 import BeautifulSoup  # HTML parsing
-from aiohttp import ClientSession, TCPConnector, ClientError
+from aiohttp import ClientSession, TCPConnector, ClientError, ClientTimeout
 from utils import check_robots, get_base_url, get_full_url
 # Threading
 from pipeline import PipelineElement
-from concurrent.futures import ThreadPoolExecutor
-# Tokenization
-from custom_tokenizer import tokenize_data, tf_idf_vectorize, top_30_words
 # Language detection
 from eld import LanguageDetector
 # Database
@@ -51,6 +48,7 @@ SEEDS = [
 LANG_DETECTOR = LanguageDetector()
 # Ignore errors
 SILENT_ERRORS = False
+SILENT_WARNINGS = False
 
 
 def log_error(error_msg):
@@ -63,7 +61,20 @@ def log_error(error_msg):
 
     """
     if not SILENT_ERRORS:
-        logging.error(error_msg)
+        print(error_msg)
+
+
+def log_warning(warning_msg):
+    """
+    Prints a warning message if SILENT_ERRORS is False.
+    Args:
+        warning_msg: The warning message to print.
+
+    Returns:
+
+    """
+    if not SILENT_WARNINGS:
+        print(warning_msg)
 
 
 class Crawler(PipelineElement):
@@ -73,22 +84,16 @@ class Crawler(PipelineElement):
         # Initialize the duckdb connection
         self.cursor = dbcon.cursor()
 
-        # Initialize the crawler state
-        self.urls_crawled = set()
-        self.ignore_links = set()
-        self.to_crawl_queue = collections.deque(SEEDS)
-        self.to_crawl_set = set(self.to_crawl_queue)
+        # Page count
         self._page_count = 0
 
-        # Load the global state
-        self._load_state()
-
         # Crawler configuration
-        self.timeout = 10  # Timeout in seconds
+        self.timeout = 2  # Timeout in seconds
         self.max_retries = 3  # Maximum number of retries
         self.retry_delay = 1  # Delay between retries in seconds
         self.max_size = 1000  # Maximum number of pages to crawl
-        self.no_dynamic_content = False  # Disable dynamic content handling (Playwright)
+        self.max_concurrent = 10  # Maximum number of concurrent requests
+        self.rate_limit = 10  # Rate limit in seconds
         self.ignore_domains = ["github.com", "linkedin.com", "xing.com", "instagram.com", "twitter.com", "youtube.com",
                                "de.wikipedia.org", "wikipedia.org", "google.com", "google.de", "google.co.uk",
                                "pinterest.com", "amazon.com", "cctue.de", "spotify.com"]
@@ -100,7 +105,11 @@ class Crawler(PipelineElement):
             "Mozilla/5.0 (compatible; TuebingenUniBot/1.0; +https://uni-tuebingen.de/de/262377)",
             "Tuebingen University Research Crawler/1.0 (+https://uni-tuebingen.de/de/262377; Academic purposes only)",
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 "
-            "Safari/537.36 (Tuebingen University Web Crawling Project)"
+            "Safari/537.36 (Tuebingen University Web Crawling Project)",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 "
+            "Safari/537.36 (Tuebingen University Web Crawler)",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 "
+            "Safari/537.36 (Tuebingen University Research Crawler)",
         ]
         self.headers = {
             "User-Agent": self.user_agent,
@@ -108,6 +117,27 @@ class Crawler(PipelineElement):
             "Accept-Encoding": "gzip, deflate, br",
             "Connection": "keep-alive",
         }
+
+        # Crawler state
+        self.currently_crawled = set()
+        self.urls_crawled = set()
+        self.ignore_links = set()
+        self.to_crawl_queue = collections.deque(SEEDS)
+        self.to_crawl_set = set(self.to_crawl_queue)
+        # Load state
+        self._load_state()
+
+        # Crawling
+        self._max_concurrent = self.max_concurrent
+        self._timeout = ClientTimeout(total=10, connect=5, sock_read=5, sock_connect=5)
+        self._connector = TCPConnector(
+            limit=100,  # Limit concurrent connections
+            force_close=True,
+            enable_cleanup_closed=True,
+            ssl=False,  # Disable SSL verification for speed (use with caution)
+            ttl_dns_cache=300,  # Cache DNS results for 5 minutes
+        )
+        self._semaphore = asyncio.Semaphore(self._max_concurrent)
 
     def __del__(self) -> None:
         self.cursor.close()
@@ -118,81 +148,80 @@ class Crawler(PipelineElement):
         return self.user_agents[self._page_count % len(self.user_agents)]
 
     async def process(self):
-        connector = TCPConnector(limit=100, force_close=True, enable_cleanup_closed=True)
-        async with ClientSession(connector=connector, trust_env=True) as session:
-            while not self.is_shutdown() and self.to_crawl_queue and len(self.urls_crawled) < self.max_size:
-                tasks = []
-                for _ in range(min(10, len(self.to_crawl_queue))):
-                    if self.to_crawl_queue and len(self.urls_crawled) < self.max_size:
-                        url = self.to_crawl_queue.popleft()
-                        task = asyncio.create_task(self._process_url(session, url))
-                        tasks.append(task)
-                    else:
-                        break
+        async with ClientSession(connector=self._connector, timeout=self._timeout) as session:
+            tasks = set()
+            while not self.is_shutdown() and len(self.urls_crawled) < self.max_size:
+                while len(tasks) < self.max_concurrent and self.to_crawl_queue:
+                    url = self.to_crawl_queue.popleft()
+                    if url not in self.ignore_links and url not in self.urls_crawled:
+                        task = asyncio.create_task(self._process_url_with_semaphore(session, url))
+                        tasks.add(task)
 
                 if not tasks:
                     break
 
-                # Wait for all tasks to complete or for shutdown
-                completed, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+                done, tasks = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
 
-                for task in completed:
+                for task in done:
                     try:
                         await task
                     except Exception as e:
                         log_error(f"Unhandled exception in task: {e}")
 
                 if self.is_shutdown():
-                    for task in pending:
-                        task.cancel()
-                    await asyncio.gather(*pending, return_exceptions=True)
-                    self.save_state()
                     break
 
-                # If there are still pending tasks, add them back to the queue
-                for task in pending:
-                    url = task.get_coro().cr_frame.f_locals.get('url')
-                    if url:
-                        self.to_crawl_queue.appendleft(url)
+            if self.is_shutdown():
+                for task in tasks:
                     task.cancel()
+                await asyncio.gather(*tasks, return_exceptions=True)
+                self.save_state()
 
-        logging.info("Crawler finished processing")
+        print("Crawler finished processing")
+
+    async def _process_url_with_semaphore(self, session, url):
+        async with self._semaphore:
+            await self._process_url(session, url)
 
     async def _process_url(self, session, url: str):
         """
         Crawls a URL and processes the content.
         Args:
-            session:
-            url:
+            session: aiohttp ClientSession
+            url: URL to crawl
 
         Returns:
-
         """
+        if url in self.currently_crawled:
+            log_warning(f"Ignoring {url} because it is already being crawled")
+            return
+
         if len(self.urls_crawled) >= self.max_size:
-            logging.info("Maximum size reached")
+            log_warning("Maximum size reached")
             return
 
         if not url.startswith("http"):
-            logging.info(f"Invalid URL: {url}")
+            log_warning(f"Invalid URL: {url}")
             return
 
         if any(domain in url for domain in self.ignore_domains):
-            logging.info(f"Ignoring {url} because it is in the ignore domains list")
+            log_warning(f"Ignoring {url} because it is in the ignore domains list")
             self.ignore_links.add(url)
             return
 
         if url in self.ignore_links or url in self.urls_crawled:
-            logging.info(f"Ignoring {url} because it is in the ignore or found list")
+            log_warning(f"Ignoring {url} because it is in the ignore or found list")
             return
 
         if not check_robots(url):
-            logging.info(f"Ignoring {url} because it is disallowed by robots.txt")
+            log_warning(f"Ignoring {url} because it is disallowed by robots.txt")
             self.ignore_links.add(url)
             return
 
+        self.currently_crawled.add(url)
         html_content = await self._fetch(session, url)
         if html_content is None:
-            logging.info(f"Error fetching {url}")
+            log_warning(f"Error fetching {url}")
             self.ignore_links.add(url)
             return
 
@@ -205,7 +234,7 @@ class Crawler(PipelineElement):
             return
 
         if not text or not soup:
-            logging.info(f"Ignoring {url} because it is empty")
+            log_warning(f"Ignoring {url} because it is empty")
             self.ignore_links.add(url)
             return
 
@@ -215,12 +244,12 @@ class Crawler(PipelineElement):
         check_text_lang = LANG_DETECTOR.detect(text) in self.langs
 
         if not check_html_tag_lang and not check_xml_tag_lang and not check_link_lang and not check_text_lang:
-            logging.info(f"Ignoring {url} because it is not in the correct language")
+            log_warning(f"Ignoring {url} because it is not in the correct language")
             self.ignore_links.add(url)
             return
 
         if not any(keyword in text for keyword in self.required_keywords):
-            logging.info(f"Ignoring {url} because it does not contain the required keywords")
+            log_warning(f"Ignoring {url} because it does not contain the required keywords")
             self.ignore_links.add(url)
             return
 
@@ -230,7 +259,9 @@ class Crawler(PipelineElement):
         if url not in self.urls_crawled and url not in self.ignore_links:
             self.urls_crawled.add(url)
 
-        logging.info(f"Finished crawling {url}. Total: {len(self.urls_crawled)} links.")
+        print(f"Finished crawling {url}. Total: {len(self.urls_crawled)} links.")
+        # Remove from currently crawled
+        self.currently_crawled.remove(url)
         if not self.is_shutdown():
             await self.call_next(soup, url)
 
@@ -286,8 +317,8 @@ class Crawler(PipelineElement):
         """
         Fetches the content of a URL using the given session.
         Args:
-            session:
-            url:
+            session: aiohttp ClientSession
+            url: URL to fetch
 
         Returns: the HTML content of the URL
         """
@@ -297,12 +328,11 @@ class Crawler(PipelineElement):
 
         self._page_count += 1
         for attempt in range(max_retries):
-            logging.info(f"Fetching {url} (attempt {attempt + 1}/{max_retries})" if attempt > 0 else f"Fetching {url}")
+            print(f"Fetching {url} (attempt {attempt + 1}/{max_retries})" if attempt > 0 else f"Fetching {url}")
             try:
-                async with session.get(url, timeout=self.timeout, headers=self.headers) as response:
+                async with session.get(url, timeout=self._timeout, headers=self.headers) as response:
                     response.raise_for_status()
-                    html_text = await response.text()
-                    return html_text
+                    return await response.text()
             except (TimeoutError, ClientError) as e:
                 if attempt == max_retries - 1:
                     log_error(f"Failed to process {url} after {max_retries} attempts: {str(e)}")
@@ -336,7 +366,7 @@ class Crawler(PipelineElement):
         """
 
         if not os.path.exists(f"crawler_states/global.json"):
-            logging.info("No global state found")
+            print("No global state found")
             self.to_crawl_queue = collections.deque(SEEDS)
             return
 

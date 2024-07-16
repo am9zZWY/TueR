@@ -20,7 +20,7 @@ class Indexer(PipelineElement):
         """
 
         if data is None:
-            logging.info(f"Failed to index {link} because the data was empty.")
+            print(f"Failed to index {link} because the data was empty.")
             return
 
         soup = data
@@ -38,7 +38,7 @@ class Indexer(PipelineElement):
         add_title_to_index(url=link, title=title_content)
         add_snippet_to_index(url=link, snippet=description_content)
 
-        logging.info(f"Indexed {link}")
+        print(f"Indexed {link}")
         if not self.is_shutdown():
             await self.call_next(soup, link)
 

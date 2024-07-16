@@ -82,6 +82,7 @@ def tokenize_data(data) -> list[str]:
         data = pipe(data)
     return data
 
+
 # Following problem: TFIDF vectorizer nimmt einen ganzen plain text und tokenized ihn dann selbst. Wir haben aber schon fertige tokenized sachen.
 # Damit wir den datentypen nicht hin und her und wir unnötig das leben komolziert machen, müssen wir viele steps wie tf idf iund tokenizing direkt nach dem crawlen machen
 # ist zwar in der pipeline nicht ganz so schön aber sonst müssen wir vieles doppelt machen und abspeichern
@@ -108,10 +109,10 @@ def top_30_words(data):
     X = vectorizer.fit_transform(data)
     # Get the feature names
     feature_names = vectorizer.get_feature_names_out()
-    logging.info(f"Feature names: {feature_names}")
-    logging.info(f"X sieht so aus: {X}")
-    logging.info(f"Shape of X: {X.shape}")
-    logging.info(f"Summe: {X.sum(axis=0)}")
+    print(f"Feature names: {feature_names}")
+    print(f"X sieht so aus: {X}")
+    print(f"Shape of X: {X.shape}")
+    print(f"Summe: {X.sum(axis=0)}")
     top_30_words = sorted(zip(feature_names, X.sum(axis=0).tolist()[0]), key=lambda x: x[1], reverse=True)[:30]
     return top_30_words
 
@@ -126,13 +127,14 @@ class Tokenizer(PipelineElement):
         """
 
         if data is None:
-            logging.info(f"Failed to tokenize {link} because the data was empty.")
+            print(f"Failed to tokenize {link} because the data was empty.")
             return
 
         soup = data
 
-        # Get the text from the page
-        text = soup.get_text()
+        # Get the text from the main content
+        main_content = soup.find("main")
+        text = main_content.get_text() if main_content is not None else soup.get_text()
 
         # Get the meta description and title
         description = soup.find("meta", attrs={"name": "description"})
@@ -154,4 +156,4 @@ class Tokenizer(PipelineElement):
         tokenized_text = tokenize_data(data=text)
         add_tokens_to_index(url=link, tokenized_text=tokenized_text)
 
-        logging.info(f"Tokenized text for {link}")
+        print(f"Tokenized text for {link}")
