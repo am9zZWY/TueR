@@ -56,17 +56,17 @@ def find_documents(Q) -> set:
     return intersection
 
 
-def dummy(tokens):
+def dummy_tokenizer(tokens: list[str]):
     return tokens
 
 
 def generate_tf_idf_matrix(path):
-    df = pd.read_csv("pages.csv", converters={'tokenized_text': pd.eval})
+    df = pd.read_csv(path, converters={'tokenized_text': pd.eval})
     df_text = df["tokenized_text"]
     # create list of lists containing the tokenized text
     tokenized_text = []
     print(type(df_text.values))
-    vectorizer = TfidfVectorizer(tokenizer=dummy, preprocessor=dummy)
+    vectorizer = TfidfVectorizer(tokenizer=dummy_tokenizer, preprocessor=dummy_tokenizer)
     X = vectorizer.fit_transform(df_text.values)
     features = pd.DataFrame(X.todense(), columns=vectorizer.get_feature_names_out())
     print(features)
@@ -117,11 +117,18 @@ def rank_documents(subset_D, Q, X):
     return ranking
 
 
-query = "max animal future"
-docs = find_documents(query)
+# query = "food and drink"
+# docs = find_documents(query)
 X = generate_tf_idf_matrix('pages.csv')
-print(f"Found {len(docs)} documents, they look like this: {docs}")
-print(f"Result: {generate_tf_idf_matrix('pages.csv')}")
 
-ranked_docs = rank_documents(docs, query, X)
-print(f"Best 20 docs: {ranked_docs[:20]}")
+
+# print(f"Found {len(docs)} documents, they look like this: {docs}")
+# print(f"Result: {generate_tf_idf_matrix('pages.csv')}")
+
+# ranked_docs = rank_documents(docs, query, X)
+# print(f"Best 20 docs: {ranked_docs[:20]}")
+
+
+def rank(query):
+    docs = find_documents(query)
+    return rank_documents(docs, query, X)
