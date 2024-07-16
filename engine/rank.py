@@ -1,3 +1,4 @@
+import logging
 import math
 from collections import Counter, defaultdict
 from functools import lru_cache
@@ -7,7 +8,7 @@ from custom_db import get_tokens, load_pages, get_page_by_id
 
 load_pages()
 
-print("Getting tokens...")
+logging.info("Getting tokens...")
 tokens = get_tokens()
 
 
@@ -46,7 +47,7 @@ def TF() -> np.ndarray:
     return bow_vectors
 
 
-print("Getting TF...")
+logging.info("Getting TF...")
 tf = TF()
 
 
@@ -59,10 +60,10 @@ def IDF():
     return np.array([math.log(len(tokens) / sum(col)) for col in zip(*tf)])
 
 
-print("Getting IDF...")
+logging.info("Getting IDF...")
 idf = IDF()
 
-print("Ready!")
+logging.info("Ready!")
 
 
 def bm25(query: str, k1=1.5, b=0.75):

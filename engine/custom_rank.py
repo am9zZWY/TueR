@@ -1,3 +1,5 @@
+import logging
+
 import pandas as pd
 
 from custom_db import get_doc_by_id
@@ -15,18 +17,18 @@ def find_intersection_2(Q):
     df_inverted.drop(columns=["Unnamed: 0"], inplace=True)
 
     # df_inverted.set_index("word", inplace=True)
-    print(df_inverted.columns)
-    print(df_inverted.head())
+    logging.info(df_inverted.columns)
+    logging.info(df_inverted.head())
     tokenized_query = preprocess_query(Q)
-    print(tokenized_query)
+    logging.info(tokenized_query)
     result = []
     for token in tokenized_query:
         if token in df_inverted.word.values:
-            print(f"Found token: {token}")
+            logging.info(f"Found token: {token}")
             doc_ids = df_inverted[df_inverted["word"] == token]["doc_ids"].apply(eval)
-            print(f"It has {len(doc_ids)} doc_ids")
+            logging.info(f"It has {len(doc_ids)} doc_ids")
             result.append(doc_ids)
-    # print(f"result: {result}")
+    # logging.info(f"result: {result}")
     # find intersection of all lists in result
     intersection = set(result[0]).intersection(*result)
     return intersection
@@ -37,21 +39,21 @@ def find_documents(Q) -> set:
     df_inverted.set_index("word", inplace=True)
     df_inverted.drop(columns=["Unnamed: 0"], inplace=True)
 
-    print(df_inverted.head())
+    logging.info(df_inverted.head())
     tokenized_query = preprocess_query(Q)
-    print(df_inverted.index.values)
+    logging.info(df_inverted.index.values)
     result = []
     for token in tokenized_query:
         if token in df_inverted.index.values:
-            print(f"Found token: {token}")
+            logging.info(f"Found token: {token}")
             doc_ids = df_inverted.loc[token].doc_ids
-            print(f"It has {len(doc_ids)} doc_ids")
+            logging.info(f"It has {len(doc_ids)} doc_ids")
             result.append(doc_ids)
     # find intersection of all lists in result
     intersection = set(result[0]).intersection(*result)
     union = set(result[0]).union(*result)
     if len(intersection) < 2:
-        print("No intersection found")
+        logging.info("No intersection found")
         return union
     return intersection
 
@@ -65,11 +67,11 @@ def generate_tf_idf_matrix(path):
     df_text = df["tokenized_text"]
     # create list of lists containing the tokenized text
     tokenized_text = []
-    print(type(df_text.values))
+    logging.info(type(df_text.values))
     vectorizer = TfidfVectorizer(tokenizer=dummy_tokenizer, preprocessor=dummy_tokenizer)
     X = vectorizer.fit_transform(df_text.values)
     features = pd.DataFrame(X.todense(), columns=vectorizer.get_feature_names_out())
-    print(features)
+    logging.info(features)
 
     return features
 
@@ -84,7 +86,7 @@ def rank_documents(subset_D, Q, X):
     query_terms_in_X = [term for term in query_terms if term in X.columns]
     # Filter the DataFrame to include only the columns corresponding to the query terms
     if not query_terms_in_X:
-        print("No query terms found in the TF-IDF matrix.")
+        logging.info("No query terms found in the TF-IDF matrix.")
         return pd.DataFrame()
     filtered_X_query_terms = filtered_X[query_terms_in_X]  # here accessen wir ganze columns
 
@@ -122,11 +124,11 @@ def rank_documents(subset_D, Q, X):
 X = generate_tf_idf_matrix('pages.csv')
 
 
-# print(f"Found {len(docs)} documents, they look like this: {docs}")
-# print(f"Result: {generate_tf_idf_matrix('pages.csv')}")
+# logging.info(f"Found {len(docs)} documents, they look like this: {docs}")
+# logging.info(f"Result: {generate_tf_idf_matrix('pages.csv')}")
 
 # ranked_docs = rank_documents(docs, query, X)
-# print(f"Best 20 docs: {ranked_docs[:20]}")
+# logging.info(f"Best 20 docs: {ranked_docs[:20]}")
 
 
 def rank(query):
