@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import threading
 
 
@@ -9,7 +10,7 @@ class PipelineElement:
         self.executor = None
         self.tasks = []
         self.shutdown_flag = threading.Event()
-        print(f"Initialized {self.name}")
+        logging.info(f"Initialized {self.name}")
 
     def add_executor(self, executor):
         self.executor = executor
@@ -25,10 +26,10 @@ class PipelineElement:
 
     async def call_next(self, *args):
         if not self.next:
-            print(f"No next elements for {self.name}")
+            logging.info(f"No next elements for {self.name}")
             return  # No next elements to process
 
-        print(f"Processing next elements for {self.name}")
+        logging.info(f"Processing next elements for {self.name}")
         tasks = []
         for element in self.next:
             if asyncio.iscoroutinefunction(element.process):

@@ -1,3 +1,5 @@
+import logging
+
 import nltk as nltk
 from sklearn.feature_extraction.text import TfidfVectorizer
 import re
@@ -9,11 +11,16 @@ import nltk
 
 from custom_db import add_tokens_to_index, upsert_page_to_index, add_title_to_index
 from pipeline import PipelineElement
+from utils import safe_join, safe_str
+
+WN_LEMMATIZER = nltk.stem.WordNetLemmatizer()
+STEMMER = nltk.stem.PorterStemmer()
 
 
 def remove_punctuations(text):
-    punct_tag = re.compile(r'[^\w\s]')
-    text = punct_tag.sub(r'', text)
+    # Remove punctuations
+    punctuations = re.compile(r'[.!?,;:\-_`´()\[\]{}<>"]')
+    text = punctuations.sub(r'', text)
     return text
 
 
@@ -51,11 +58,17 @@ def tokenize_plain_words(words: str):
     return words.split()
 
 
-def stem_and_remove_stopwords(words) -> list[str]:
-    # use english porterStemmer
+def stem(words) -> list[str]:
+    words = [STEMMER.stem(word) for word in words]  # added stemmer
+    return words
 
-    stemmer = nltk.stem.porter.PorterStemmer()
-    words = [stemmer.stem(word) for word in words if word not in stopwords.words("english")]  # added stemmer
+
+def remove_stopwords(words):
+    return [word for word in words if word not in stopwords.words("english")]
+
+
+def lemmatize(words):
+    words = [WN_LEMMATIZER.lemmatize(word) for word in words]
     return words
 
 
@@ -63,8 +76,8 @@ def tokenize_data(data) -> list[str]:
     """
     Tokenizes the input data.
     """
-    pipeline = [remove_punctuations, remove_html, remove_url, remove_emoji, tokenize_plain_words,
-                stem_and_remove_stopwords]
+    pipeline = [remove_punctuations, remove_html, remove_url, remove_emoji, tokenize_plain_words, remove_stopwords,
+                lemmatize]
     for pipe in pipeline:
         data = pipe(data)
     return data
@@ -91,10 +104,10 @@ def top_30_words(data):
     X = vectorizer.fit_transform(data)
     # Get the feature names
     feature_names = vectorizer.get_feature_names_out()
-    print(f"Feature names: {feature_names}")
-    print(f"X sieht so aus: {X}")
-    print(f"Shape of X: {X.shape}")
-    print(f"Summe: {X.sum(axis=0)}")
+    logging.info(f"Feature names: {feature_names}")
+    logging.info(f"X sieht so aus: {X}")
+    logging.info(f"Shape of X: {X.shape}")
+    logging.info(f"Summe: {X.sum(axis=0)}")
     top_30_words = sorted(zip(feature_names, X.sum(axis=0).tolist()[0]), key=lambda x: x[1], reverse=True)[:30]
     return top_30_words
 
@@ -108,18 +121,33 @@ class Tokenizer(PipelineElement):
         Tokenizes the input data.
         """
 
+        if data is None:
+            logging.info(f"Failed to tokenize {link} because the data was empty.")
+            return
+
         soup = data
+
+        # Get the text from the page
         text = soup.get_text()
-        img_tags = soup.findAll("img")
+
+        # Get the meta description and title
         description = soup.find("meta", attrs={"name": "description"})
         description_content = description.get("content") if description is not None else ""
         title = soup.find("title")
         title_content = title.string if title is not None else ""
 
+        # Get the alt texts from the images
+        img_tags = soup.findAll("img")
         alt_texts = [img.get("alt") for img in img_tags]
-        text = text + " ".join(alt_texts) + " " + str(description_content) + " " + str(title_content)
 
+        # Join all the text together
+        alt_texts_str = safe_join(alt_texts)
+        description_str = safe_str(description_content)
+        title_str = safe_str(title_content)
+        text = f"{text} {alt_texts_str} {description_str} {title_str}".strip()
+
+        # Tokenize the text
         tokenized_text = tokenize_data(data=text)
         add_tokens_to_index(url=link, tokenized_text=tokenized_text)
 
-        print(f"Tokenized text for {link}")
+        logging.info(f"Tokenized text for {link}")

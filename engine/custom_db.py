@@ -1,3 +1,4 @@
+import logging
 import os
 
 import pandas as pd
@@ -61,7 +62,7 @@ def add_tokens_to_index(url: str, tokenized_text: list[str]):
     if not pages_df[pages_df['id'] == page_id].empty:
         pages_df.at[pages_df[pages_df['id'] == page_id].index[0], 'tokenized_text'] = tokenized_text
     else:
-        print(f"Page with ID {page_id} not found")
+        logging.info(f"Page with ID {page_id} not found")
 
 
 def add_title_to_index(url: str, title: str):
@@ -80,7 +81,7 @@ def add_title_to_index(url: str, title: str):
     if not pages_df[pages_df['id'] == page_id].empty:
         pages_df.at[pages_df[pages_df['id'] == page_id].index[0], 'title'] = title
     else:
-        print(f"Page with ID {page_id} not found")
+        logging.info(f"Page with ID {page_id} not found")
 
 
 def add_snippet_to_index(url, snippet):
@@ -99,7 +100,7 @@ def add_snippet_to_index(url, snippet):
     if not pages_df[pages_df['url'] == url].empty:
         pages_df.at[pages_df[pages_df['url'] == url].index[0], 'snippet'] = snippet
     else:
-        print(f"Page with URL {url} not found")
+        logging.info(f"Page with URL {url} not found")
 
 
 def get_tokens() -> list[list[str]]:
@@ -162,17 +163,17 @@ def load_pages() -> pd.DataFrame:
 
     # Check if the file exists
     if not os.path.exists(f"pages.csv"):
-        print("No pages found")
+        logging.info("No pages found")
         return pages_df
 
     try:
         pages_df = pd.read_csv("pages.csv", header=0)
     except pd.errors.EmptyDataError:
-        print("No pages found")
+        logging.info("No pages found")
         return pages_df
 
     # Convert the tokenized_text column to a list of lists
     pages_df['tokenized_text'] = pages_df['tokenized_text'].apply(eval)
 
-    print("Loaded pages")
+    logging.info("Loaded pages")
     return pages_df

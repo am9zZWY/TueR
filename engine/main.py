@@ -7,7 +7,9 @@ import signal
 from concurrent.futures import ThreadPoolExecutor
 import asyncio
 import nest_asyncio
-
+import signal
+# Logging
+import logging
 # Database
 import duckdb
 # Pipeline
@@ -16,9 +18,14 @@ from custom_db import index_pages, access_index, save_pages
 from custom_tokenizer import Tokenizer
 from index import Indexer
 
-# Constants
-MAX_THREADS = 10
+# Logging setup
+logging.basicConfig(
+    format='%(asctime)s %(levelname)-8s %(message)s',
+    level=logging.INFO,
+    datefmt='%Y-%m-%d %H:%M:%S')
 
+# Threading
+MAX_THREADS = 10
 # Patch asyncio to allow nested event loops
 nest_asyncio.apply()
 
@@ -39,7 +46,7 @@ indexer.add_next(tokenizer)
 
 
 def signal_handler(signum, frame):
-    print("Interrupt received, shutting down... Please wait")
+    logging.info("Interrupt received, shutting down... Please wait. This may take a few seconds.")
     for element in [crawler, indexer, tokenizer]:
         element.shutdown()
 
@@ -60,7 +67,7 @@ async def main():
         try:
             await crawler.process()
         except Exception as e:
-            print(f"An error occurred: {e}")
+            logging.info(f"An error occurred: {e}")
         finally:
             # Ensure states are saved even if an exception occurs
             for element in [crawler, indexer, tokenizer]:
@@ -70,7 +77,7 @@ async def main():
             index_df = access_index()
             index_df.to_csv("inverted_index.csv")
             con.close()
-            print("State saved")
+            logging.info("State saved")
 
     # Save the state+
     for element in [crawler, indexer, tokenizer]:
@@ -80,7 +87,7 @@ async def main():
     index_df = access_index()
     index_df.to_csv("inverted_index.csv")
     con.close()
-    print("State saved")
+    logging.info("State saved")
 
 
 if __name__ == "__main__":
