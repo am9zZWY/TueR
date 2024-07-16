@@ -32,7 +32,7 @@
           <li v-for="result in results" :key="result.id"
               class="mb-6 p-6 border border-gray-200 rounded-xl shadow-sm bg-white hover:shadow-lg transition-shadow duration-300">
             <div class="flex justify-between items-start">
-              <a :href="result.url" class="text-xl font-semibold text-indigo-600 hover:text-indigo-800 transition duration-300">
+              <a :href="result.url" class="text-xl font-semibold text-indigo-600 hover:text-indigo-800 transition duration-300" target="_blank">
                 {{ result.title }}
               </a>
               <button class="text-gray-400 hover:text-yellow-500 transition duration-300">
