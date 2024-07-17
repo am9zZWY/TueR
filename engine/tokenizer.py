@@ -257,7 +257,9 @@ test_sentences = [
     "I'm 6'2\" tall and I weigh 180 lbs. I'm 25 years old.",
 ]
 
-for sentence in test_sentences:
-    print(f"Original: {sentence}")
-    print(f"Tokenized: {process_text(sentence)}")
-    print()
+if __name__ == "__main__":
+
+    for sentence in test_sentences:
+        print(f"Original: {sentence}")
+        print(f"Tokenized: {process_text(sentence)}")
+        print()
