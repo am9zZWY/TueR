@@ -27,6 +27,19 @@ def remove_emails(text: str) -> str:
     return text
 
 
+def remove_prices(text: str) -> str:
+    price_pattern = re.compile(r'''
+        (?:(?:\$|€|£|¥)(?:\s?))                     # Currency symbols at the start
+        \d{1,3}(?:,\d{3})*(?:\.\d{1,2})?            # Numbers with optional thousands separators and decimal points
+        |
+        \d{1,3}(?:,\d{3})*(?:\.\d{1,2})?            # Numbers with optional thousands separators and decimal points
+        (?:\s?(?:\$|€|£|¥|USD|EUR|GBP|JPY))         # Currency symbols or codes at the end
+    ''', re.VERBOSE | re.IGNORECASE)
+
+    text = price_pattern.sub('', text)
+    return text
+
+
 def remove_percentages(text: str) -> str:
     percentage_clean = re.compile(r"\d+%")
     text = percentage_clean.sub(r'', text)
@@ -122,6 +135,7 @@ def preprocess_text(text: str) -> str:
     text = remove_phone_number(text)
     text = remove_dates(text)
     text = remove_emoji(text)
+    text = remove_prices(text)
     text = remove_percentages(text)
     return text
 
@@ -129,8 +143,6 @@ def preprocess_text(text: str) -> str:
 # Load the spaCy model
 print("Loading spaCy model...")
 nlp = spacy.load("en_core_web_sm", disable=["tok2vec", "parser", "senter"])
-nlp.add_pipe("merge_entities")
-nlp.add_pipe("merge_noun_chunks")
 
 
 def process_text(text: str) -> list[str]:
@@ -235,6 +247,14 @@ test_sentences = [
     "I use Microsoft Windows",
     "Apple Inc. is a great company",
     "I ate at McDonald's",
+    "I study at the Max Planck Institute",
+    "Tübingen is a nice city",
+    "Everyday I eat at Salam Burger in Tübingen and I love it",
+    # Misc
+    "I ❤️ Python",
+    "I'm 6'2\" tall",
+    "I'm 6'2\" tall and I weigh 180 lbs.",
+    "I'm 6'2\" tall and I weigh 180 lbs. I'm 25 years old.",
 ]
 
 for sentence in test_sentences:
