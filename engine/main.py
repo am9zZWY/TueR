@@ -15,11 +15,11 @@ import duckdb
 from crawl import Crawler
 from custom_db import index_pages, access_index, save_pages
 from download import Downloader, Loader
+from summarize import Summarizer
 from tokenizer import Tokenizer
 from index import Indexer
 # Server
 from server import start_server
-print('Test')
 
 # Threading
 MAX_THREADS = 10
@@ -48,14 +48,17 @@ async def pipeline(from_crawl: bool = False):
     tokenizer = Tokenizer()
     downloader = Downloader()
     loader = Loader()
+    summarizer = Summarizer()
 
     # Add the pipeline elements
     # Crawler: Crawl the website
     crawler.add_next(downloader)
     crawler.add_next(indexer)
+    #crawler.add_next(summarizer)
 
     # Loader: Load the pages from the disk
     loader.add_next(indexer)
+    loader.add_next(summarizer)
 
     # Indexer: Index the pages
     indexer.add_next(tokenizer)
