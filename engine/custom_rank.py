@@ -3,12 +3,13 @@ import logging
 import pandas as pd
 
 from custom_db import get_doc_by_id
-from custom_tokenizer import tokenize_data
 from sklearn.feature_extraction.text import TfidfVectorizer
+
+from tokenizer import process_text
 
 
 def preprocess_query(Q):
-    tokenized_query = tokenize_data(Q)
+    tokenized_query = process_text(Q)
     return tokenized_query
 
 

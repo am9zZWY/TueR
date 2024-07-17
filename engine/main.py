@@ -14,7 +14,7 @@ import duckdb
 # Pipeline
 from crawl import Crawler
 from custom_db import index_pages, access_index, save_pages
-from custom_tokenizer import Tokenizer
+from tokenizer import Tokenizer
 from index import Indexer
 
 # Threading
