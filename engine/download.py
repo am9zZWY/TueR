@@ -84,7 +84,7 @@ class Loader(PipelineElement):
                 filename = self._file_list.pop(0)
             except IndexError:
                 self.lock.release()
-                break
+                continue
             finally:
                 self.lock.release()
             filepath = os.path.join(self.storage_dir, filename)
