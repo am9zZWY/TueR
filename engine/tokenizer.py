@@ -153,7 +153,13 @@ def process_text(text: str) -> list[str]:
 
     # Process with spaCy
     doc = nlp(text)
-    tokens = [token.text for token in doc if not token.is_stop and not token.is_punct and not token.is_space]
+    tokens = []
+    for token in doc:
+        if token.is_stop or token.is_punct or token.is_space:
+            continue
+        # Use the lemma for nouns and proper nouns
+        token = token.lemma_ if token.pos_ in ["NOUN", "PROPN"] else token.text
+        tokens.append(token)
 
     # Lowercase the tokens
     tokens = lower(tokens)
@@ -169,7 +175,6 @@ class Tokenizer(PipelineElement):
         """
         Tokenizes the input data.
         """
-
         if data is None:
             print(f"Failed to tokenize {link} because the data was empty.")
             return
@@ -177,30 +182,60 @@ class Tokenizer(PipelineElement):
         soup = data
 
         # Get the text from the main content
-        main_content = soup.find("main")
-        text = main_content.get_text() if main_content is not None else soup.get_text()
+        main_content = soup.find("main") or soup.find("article") or soup.find("section") or soup.find("body")
 
-        # Get the meta description and title
+        if main_content is None:
+            print(f"Warning: No main content found for {link}. Using entire body.")
+            main_content = soup
+
+        # List of tags you want to extract text from
+        tags_to_extract = [
+            'title', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'span', 'div', 'li',
+            'td', 'th', 'a', 'b', 'strong', 'i', 'em', 'mark', 'small', 'del', 'ins',
+            'sub', 'sup', 'q', 'blockquote', 'code', 'pre'
+        ]
+
+        extracted_text = []
+
+        try:
+            for tag in main_content.find_all(tags_to_extract):
+                cleaned_text = clean_text(tag.get_text(strip=True))
+                if cleaned_text:
+                    extracted_text.append(cleaned_text)
+        except AttributeError:
+            print(f"Error: Unable to parse content for {link}")
+            return
+
+        # Process meta-description and title
         description = soup.find("meta", attrs={"name": "description"})
-        description_content = description.get("content") if description is not None else ""
+        description_content = clean_text(description.get("content") if description else "")
         title = soup.find("title")
-        title_content = title.string if title is not None else ""
+        title_content = clean_text(title.string if title else "")
 
-        # Get the alt texts from the images
-        img_tags = soup.findAll("img")
-        alt_texts = [img.get("alt") for img in img_tags]
+        # Process image alt texts
+        img_tags = soup.find_all("img")
+        alt_texts = [clean_text(img.get("alt", "")) for img in img_tags if img.get("alt")]
 
-        # Join all the text together
-        alt_texts_str = safe_join(alt_texts)
-        description_str = safe_str(description_content)
-        title_str = safe_str(title_content)
-        text = f"{text} {alt_texts_str} {description_str} {title_str}".strip()
+        # Combine all text
+        all_text = extracted_text + [description_content, title_content] + alt_texts
+        text = " ".join(all_text).strip()
 
         # Tokenize the text
-        tokenized_text = process_text(text=text)
-        add_tokens_to_index(url=link, tokenized_text=tokenized_text)
+        try:
+            tokenized_text = process_text(text=text)
+            add_tokens_to_index(url=link, tokenized_text=tokenized_text)
+            print(f"Tokenized text for {link}")
+        except Exception as e:
+            print(f"Error tokenizing text for {link}: {str(e)}")
 
-        print(f"Tokenized text for {link}")
+
+def clean_text(text):
+    """
+    Clean the input text by removing excess whitespace.
+    """
+    # Remove excess whitespace
+    text = re.sub(r'\s+', ' ', text).strip()
+    return text
 
 
 # Test tokenization
