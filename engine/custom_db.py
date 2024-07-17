@@ -5,6 +5,8 @@ import pandas as pd
 
 from collections import defaultdict
 
+from pandas import DataFrame
+
 # Create a DataFrame to store HTML pages
 headers = ['id', 'url', 'title', 'snippet', 'tokenized_text']
 pages_df = pd.DataFrame(columns=headers).astype({
@@ -15,6 +17,7 @@ pages_df = pd.DataFrame(columns=headers).astype({
     'tokenized_text': 'object'
 })
 inverted_index = defaultdict(list)
+inverted_index_df = pd.DataFrame(columns=['word', 'doc_ids'])
 
 
 def upsert_page_to_index(url: str):
@@ -165,7 +168,30 @@ def get_doc_by_id(page_id: int):
     return page
 
 
-def load_pages() -> pd.DataFrame:
+def load_inverted_index() -> pd.DataFrame:
+    """
+    Load the inverted index DataFrame from a CSV file.
+    Returns: pd.DataFrame
+    """
+
+    global inverted_index_df
+
+    # Check if the file exists
+    if not os.path.exists(f"inverted_index.csv"):
+        print("No inverted index found")
+        return pd.DataFrame()
+
+    try:
+        inverted_index_df = pd.read_csv("inverted_index.csv", header=0)
+    except pd.errors.EmptyDataError:
+        print("No inverted index found")
+        return pd.DataFrame()
+
+    print("Loaded inverted index")
+    return inverted_index_df
+
+
+def load_pages() -> DataFrame | None:
     """
     Load the pages DataFrame from a CSV file.
     Returns: pd.DataFrame
@@ -176,19 +202,19 @@ def load_pages() -> pd.DataFrame:
     # Check if the file exists
     if not os.path.exists(f"pages.csv"):
         print("No pages found")
-        return pages_df
+        return None
 
     try:
         pages_df = pd.read_csv("pages.csv", header=0)
     except pd.errors.EmptyDataError:
         print("No pages found")
-        return pages_df
+        return None
 
     # Convert the tokenized_text column to a list of lists
     pages_df['tokenized_text'] = pages_df['tokenized_text'].apply(eval)
 
     print("Loaded pages")
-    return pages_df
+    return None
 
 
 load_pages()

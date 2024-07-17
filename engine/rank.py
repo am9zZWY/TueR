@@ -8,7 +8,6 @@ from custom_db import get_tokens, load_pages, get_page_by_id
 
 load_pages()
 
-print("Getting tokens...")
 tokens = get_tokens()
 
 
@@ -47,7 +46,6 @@ def TF() -> np.ndarray:
     return bow_vectors
 
 
-print("Getting TF...")
 tf = TF()
 
 
@@ -60,10 +58,7 @@ def IDF():
     return np.array([math.log(len(tokens) / sum(col)) for col in zip(*tf)])
 
 
-print("Getting IDF...")
 idf = IDF()
-
-print("Ready!")
 
 
 def bm25(query: str, k1=1.5, b=0.75):

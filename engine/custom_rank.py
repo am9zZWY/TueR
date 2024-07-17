@@ -1,8 +1,8 @@
-import logging
+import os
 
 import pandas as pd
 
-from custom_db import get_doc_by_id
+from custom_db import get_doc_by_id, load_pages
 from sklearn.feature_extraction.text import TfidfVectorizer
 
 from tokenizer import process_text
@@ -63,16 +63,16 @@ def dummy_tokenizer(tokens: list[str]):
     return tokens
 
 
-def generate_tf_idf_matrix(path):
-    df = pd.read_csv(path, converters={'tokenized_text': pd.eval})
+def generate_tf_idf_matrix():
+    df = load_pages()
+    if df is None:
+        return pd.DataFrame()
     df_text = df["tokenized_text"]
     # create list of lists containing the tokenized text
     tokenized_text = []
-    print(type(df_text.values))
-    vectorizer = TfidfVectorizer(tokenizer=dummy_tokenizer, preprocessor=dummy_tokenizer)
+    vectorizer = TfidfVectorizer(tokenizer=dummy_tokenizer, preprocessor=dummy_tokenizer, token_pattern=None)
     X = vectorizer.fit_transform(df_text.values)
     features = pd.DataFrame(X.todense(), columns=vectorizer.get_feature_names_out())
-    print(features)
 
     return features
 
@@ -122,7 +122,7 @@ def rank_documents(subset_D, Q, X):
 
 # query = "food and drink"
 # docs = find_documents(query)
-X = generate_tf_idf_matrix('pages.csv')
+X = generate_tf_idf_matrix()
 
 
 # print(f"Found {len(docs)} documents, they look like this: {docs}")
@@ -130,7 +130,6 @@ X = generate_tf_idf_matrix('pages.csv')
 
 # ranked_docs = rank_documents(docs, query, X)
 # print(f"Best 20 docs: {ranked_docs[:20]}")
-
 
 def rank(query):
     docs = find_documents(query)
