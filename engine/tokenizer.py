@@ -6,6 +6,12 @@ from custom_db import add_tokens_to_index
 from pipeline import PipelineElement
 from utils import safe_join, safe_str
 
+"""
+IMPORTANT:
+Make sure you install the spaCy model with:
+python -m spacy download en_core_web_sm
+"""
+
 
 # Define regular expressions for preprocessing
 
@@ -122,7 +128,7 @@ def preprocess_text(text: str) -> str:
 
 # Load the spaCy model
 print("Loading spaCy model...")
-nlp = spacy.load("en_core_web_sm", disable=["tok2vec", "parser", "senter", "tagger", "attribute_ruler"])
+nlp = spacy.load("en_core_web_sm", disable=["tok2vec", "parser", "senter"])
 nlp.add_pipe("merge_entities")
 nlp.add_pipe("merge_noun_chunks")
 
