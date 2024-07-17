@@ -16,3 +16,5 @@ lxml==5.2.2
 
 aiofiles==24.1.0
 gensim==4.3.2
+
+transformers==4.42.4
