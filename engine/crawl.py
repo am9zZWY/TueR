@@ -116,6 +116,7 @@ class Crawler(PipelineElement):
             "Accept-Language": "en-US,en;q=0.9,de;q=0.8",
             "Accept-Encoding": "gzip, deflate, br",
             "Connection": "keep-alive",
+            "Cache-Control": "max-age=0"
         }
 
         # Crawler state
