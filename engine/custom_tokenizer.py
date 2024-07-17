@@ -157,3 +157,34 @@ class Tokenizer(PipelineElement):
         add_tokens_to_index(url=link, tokenized_text=tokenized_text)
 
         print(f"Tokenized text for {link}")
+
+
+# Test tokenization
+
+test_sentences = [
+    "Mr. Smith's car is blue-green.",
+    "The URL is https://www.example.com/path?param=value#fragment",
+    "She said, 'I can't believe it!'",
+    "Send an e-mail to john.doe@example.com",
+    "The price is $19.99 (20% off)",
+    "I love the movie 'Star Wars: Episode IV - A New Hope'",
+    "Python 3.9.5 was released on 05/03/2021",
+    "Call me at +1 (555) 123-4567",
+    "The equation is E=mc^2",
+    "Use the #hashtag and @mention",
+    "I'm running... but I'm tired",
+    "It's 72°F outside",
+    "He said: Don't do that!",
+    "The file name is 'document_v1.2.txt'",
+    "1,000,000 people can't be wrong",
+    "The code is: <html><body>Hello</body></html>",
+    "Let's meet at 9:30 AM",
+    "The password is: P@ssw0rd!",
+    "I'll have a ham & cheese sandwich",
+    "The result was 42% (not 50%)",
+]
+
+for sentence in test_sentences:
+    print(f"Original: {sentence}")
+    print(f"Tokenized: {tokenize_data(sentence)}")
+    print()
