@@ -1,4 +1,4 @@
-import logging
+
 
 from custom_db import upsert_page_to_index, add_title_to_index, add_snippet_to_index, load_pages
 from pipeline import PipelineElement

@@ -1,5 +1,3 @@
-import os
-
 import pandas as pd
 
 from custom_db import get_doc_by_id, load_pages

@@ -1,5 +1,4 @@
 # General
-import asyncio
 import collections  # For deque
 import json
 # Parsing
@@ -7,6 +6,7 @@ from bs4 import BeautifulSoup  # HTML parsing
 from aiohttp import ClientSession, TCPConnector, ClientError, ClientTimeout
 from utils import check_robots, get_base_url, get_full_url
 # Threading
+import asyncio
 from pipeline import PipelineElement
 # Language detection
 from eld import LanguageDetector
