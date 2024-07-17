@@ -148,12 +148,6 @@ class Crawler(PipelineElement):
         return self.user_agents[self._page_count % len(self.user_agents)]
 
     async def process(self):
-        """
-        Starts the crawling process.
-        Is called in the Pipeline.
-        Returns: None
-
-        """
         async with ClientSession(connector=self._connector, timeout=self._timeout) as session:
             tasks = set()
             while not self.is_shutdown() and len(self.urls_crawled) < self.max_size:
@@ -185,16 +179,7 @@ class Crawler(PipelineElement):
 
         print("Crawler finished processing")
 
-    async def _process_url_with_semaphore(self, session, url: str):
-        """
-        Wrapper for _process_url that uses a semaphore to limit the number of concurrent requests.
-        Args:
-            session: aiohttp ClientSession
-            url: URL to crawl
-
-        Returns: None
-
-        """
+    async def _process_url_with_semaphore(self, session, url):
         async with self._semaphore:
             await self._process_url(session, url)
 
@@ -205,7 +190,7 @@ class Crawler(PipelineElement):
             session: aiohttp ClientSession
             url: URL to crawl
 
-        Returns: None
+        Returns:
         """
         if url in self.currently_crawled:
             log_warning(f"Ignoring {url} because it is already being crawled")
@@ -280,7 +265,7 @@ class Crawler(PipelineElement):
         if not self.is_shutdown():
             await self.call_next(soup, url)
 
-    async def _handle_links(self, soup: BeautifulSoup, url: str):
+    async def _handle_links(self, soup, url):
         """
         Checks the links in the soup and adds them to the to_crawl_queue if they are not in the ignore list, not in the
         found list, and not in the to_crawl_set.
@@ -288,7 +273,7 @@ class Crawler(PipelineElement):
             soup: BeautifulSoup object
             url: URL of the page
 
-        Returns: None
+        Returns:
 
         """
         for a_tag in soup.find_all("a", href=True):
@@ -297,9 +282,6 @@ class Crawler(PipelineElement):
             # Check if link is a fragment
             if found_link.startswith("#"):
                 continue
-
-            # Strip out the fragment
-            found_link = found_link.split("#")[0]
 
             # Check if link is relative
             if found_link.startswith("/"):
