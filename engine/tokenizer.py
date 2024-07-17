@@ -4,7 +4,6 @@ import spacy
 
 from custom_db import add_tokens_to_index
 from pipeline import PipelineElement
-from utils import safe_join, safe_str
 
 """
 IMPORTANT:
