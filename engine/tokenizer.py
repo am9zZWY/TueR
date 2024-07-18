@@ -234,6 +234,8 @@ class Tokenizer(PipelineElement):
                 INSERT INTO words(word)
                 SELECT DISTINCT token
                 FROM   tokens 
+                    EXCEPT
+                SELECT word FROM words
             """)
 
             self.cursor.execute("""
