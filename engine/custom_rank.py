@@ -132,3 +132,19 @@ X = generate_tf_idf_matrix()
 def rank(query):
     docs = find_documents(query)
     return rank_documents(docs, query, X)
+
+
+def rank_from_file(filepath: str) -> list[list]:
+    queries = []
+    with open(filepath, "r") as file:
+        content = file.read()
+
+        for line in content.splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            number, item = line.split(maxsplit=1)
+            queries.append(item)
+
+    # Return the ranked queries
+    return [rank(query) for query in queries]
