@@ -3,31 +3,21 @@ from transformers import pipeline
 
 from pipeline import PipelineElement
 
-# Load summarization pipeline
-MODEL = "google/pegasus-xsum"
-print(f"Loading summarization model {MODEL} ... This may take a few minutes.")
-summarizer = pipeline("summarization", model=MODEL, tokenizer=MODEL)
-
-
-def summarize_text(text: str, max_words: int = 15) -> str:
-    summary = summarizer(text, max_length=max_words * 2, min_length=max_words, do_sample=False)[0]['summary_text']
-
-    # Truncate to the specified number of words
-    words = summary.split()
-    if len(words) > max_words:
-        summary = ' '.join(words[:max_words]) + '...'
-
-    return summary
-
 
 class Summarizer(PipelineElement):
     """
     Summarizes the input text.
     """
 
-    def __init__(self, dbcon: duckdb.DuckDBPyConnection):
+    def __init__(self, dbcon: duckdb.DuckDBPyConnection, summary_model: str = "google/pegasus-xsum"):
         super().__init__("Summarizer")
         self.cursor = dbcon.cursor()
+
+        # Load summarization pipeline
+        self.summary_model = summary_model
+        print(f"Loading summarization model {summary_model} ... This may take a few minutes.")
+        self.summarizer = pipeline("summarization", model=summary_model, tokenizer=summary_model)
+
 
     def __del__(self):
         self.cursor.close()
@@ -51,7 +41,7 @@ class Summarizer(PipelineElement):
 
         text = main_content.get_text()
 
-        summary = summarize_text(text)
+        summary = self._summarize_text(text)
 
         self.cursor.execute("""
             UPDATE documents
@@ -63,3 +53,14 @@ class Summarizer(PipelineElement):
 
         if not self.is_shutdown():
             await self.propagate_to_next(summary)
+
+    def _summarize_text(self, text: str, max_words: int = 15) -> str:
+        summary = self.summarizer(text, max_length=max_words * 2, min_length=max_words, do_sample=False)[0][
+            'summary_text']
+
+        # Truncate to the specified number of words
+        words = summary.split()
+        if len(words) > max_words:
+            summary = ' '.join(words[:max_words]) + '...'
+
+        return summary
