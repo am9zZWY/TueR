@@ -7,14 +7,16 @@ class PipelineElement:
         self.name = name
         self.next = []
         self.executor = None
-        self.tasks = []
+        self.task_queue = asyncio.Queue()
         self.shutdown_flag = threading.Event()
+        self.loop = asyncio.get_event_loop()
         print(f"Initialized {self.name}")
 
     def add_executor(self, executor):
         self.executor = executor
+        self.loop.create_task(self.worker_loop())
 
-    def process(self, *args):
+    async def process(self, *args):
         raise NotImplementedError
 
     def save_state(self):
@@ -23,25 +25,25 @@ class PipelineElement:
     def add_next(self, next_element):
         self.next.append(next_element)
 
-    async def call_next(self, *args):
-        if not self.next:
-            print(f"No next elements for {self.name}")
-            return  # No next elements to process
+    def add_task(self, *args):
+        self.loop.create_task(self.task_queue.put(args))
 
-        print(f"Processing next elements for {self.name}")
-        tasks = []
+    async def worker_loop(self):
+        while not self.is_shutdown():
+            try:
+                args = await asyncio.wait_for(self.task_queue.get(), timeout=1.0)
+                if asyncio.iscoroutinefunction(self.process):
+                    result = await self.process(*args)
+                else:
+                    result = await self.loop.run_in_executor(self.executor, self.process, *args)
+                self.task_queue.task_done()
+                await self.propagate_to_next(result)
+            except asyncio.TimeoutError:
+                continue  # No tasks available, continue checking
+
+    async def propagate_to_next(self, *args):
         for element in self.next:
-            if asyncio.iscoroutinefunction(element.process):
-                # If the process method is a coroutine, create a task
-                task = asyncio.create_task(element.process(*args))
-            else:
-                # If it's a regular function, run it in the executor
-                loop = asyncio.get_running_loop()
-                task = loop.run_in_executor(self.executor, element.process, *args)
-            tasks.append(task)
-
-        # Wait for all tasks to complete
-        await asyncio.gather(*tasks)
+            element.add_task(*args)
 
     def shutdown(self):
         self.shutdown_flag.set()

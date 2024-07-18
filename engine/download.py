@@ -96,7 +96,7 @@ class Loader(PipelineElement):
             # Decompress and deserialize the BeautifulSoup object
             soup, link = await decompress_html(filepath)
             if soup is not None:
-                await self.call_next(soup, link)
+                await self.propagate_to_next(soup, link)
 
     def _get_file_list(self) -> list[str]:
         """

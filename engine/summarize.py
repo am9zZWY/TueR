@@ -50,4 +50,4 @@ class Summarizer(PipelineElement):
         print(f"Summarized {link} to: {summary}")
 
         if not self.is_shutdown():
-            await self.call_next(summary)
+            await self.propagate_to_next(summary)
