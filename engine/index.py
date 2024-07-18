@@ -1,8 +1,6 @@
-import logging
 import duckdb
-import pandas as pd
 
-from custom_db import upsert_page_to_index, add_title_to_index, add_snippet_to_index, load_pages
+from custom_db import load_pages
 from pipeline import PipelineElement
 
 
