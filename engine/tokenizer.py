@@ -228,7 +228,8 @@ class Tokenizer(PipelineElement):
         # Tokenize the text
         try:
             tokenized_text : list[str] = process_text(text=text)
-            tokens = pd.DataFrame({'doc_id': doc_id, 'token': tokenized_text})
+            tokens = pd.DataFrame({'token': tokenized_text})
+            tokens['doc_id'] = doc_id
             self.cursor.execute("""
                 INSERT INTO words(word)
                 SELECT DISTINCT token
@@ -237,14 +238,17 @@ class Tokenizer(PipelineElement):
 
             self.cursor.execute("""
                 INSERT INTO Inverted_Index(word, doc, amount)
-                SELECT w.id, t.doc_id, COUNT(t.token)
+                SELECT w.id, t.doc_id, COUNT(*)
                 FROM   tokens AS t, words AS w
                 WHERE  t.token = w.word
-                GROUP BY t.token
+                GROUP BY w.id, t.doc_id, t.token
             """)
             print(f"Tokenized text for {link}")
         except Exception as e:
             print(f"Error tokenizing text for {link}: {str(e)}")
+            tokens = pd.DataFrame({'token': tokenized_text})
+            tokens['doc_id'] = doc_id
+            print(doc_id)
 
 
 def clean_text(text):

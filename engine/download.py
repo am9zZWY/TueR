@@ -51,6 +51,6 @@ class Loader(PipelineElement):
 
             soup = pickle.loads(lzma.decompress(blob))
 
-            await self.propagate_to_next(soup, doc_id, link)
+            await self.propagate_to_next(soup, link, doc_id = doc_id)
 
             row = self.cursor.fetchone()

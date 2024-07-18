@@ -108,6 +108,31 @@ async def pipeline(from_crawl: bool = False):
             con.close()
             print("State saved")
 
+    # Compute TF-IDF matrix
+    con.execute("""
+        WITH 
+        DocumentCount(total_docs) AS (
+            SELECT COUNT(*) FROM documents
+        ),
+        TermFrequence AS Inverted_Index,
+        DocumentFrequency(word, doc_count) AS (
+            SELECT word, COUNT(DISTINCT doc) AS doc_count
+            FROM   Inverted_Index
+        ),
+        TFIDF(doc, word, tfidf) AS (
+            SELECT tf.doc, tf.word,
+                   tf.amount * LOG((total_docs * 1.0) / df.doc_count)
+            FROM   TermFrequency AS tf,
+                   DocumentCount AS _(total_docs),
+                   DocumentFrequency AS df
+            WHERE  tf.word = df.word
+        )
+        INSERT INTO TFIDFs (doc, word, tfidf)
+            SELECT doc, word, tfidf
+            FROM   TFIDF
+            WHERE  tfidf > 0
+    """)
+
     # Save the state+
     for element in [crawler, indexer, tokenizer]:
         element.save_state()

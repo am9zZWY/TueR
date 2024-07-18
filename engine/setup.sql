@@ -28,29 +28,28 @@ CREATE TABLE documents (
 );
 
 CREATE TABLE words (
-    word       VARCHAR PRIMARY KEY,
-    id         INTEGER DEFAULT nextval('word_ids') UNIQUE,
-    occurrences INTEGER NOT NULL
+    word        VARCHAR PRIMARY KEY,
+    id          INTEGER DEFAULT nextval('word_ids') UNIQUE,
 );
 
 CREATE TABLE Inverted_Index (
-    word INTEGER,
-    doc  INTEGER,
+    word   INTEGER,
+    doc    INTEGER,
     amount INTEGER,
     PRIMARY KEY (word, doc),
-    FOREIGN KEY (word) ON words(id),
-    FOREIGN KEY (doc)  ON documents(id)
+    FOREIGN KEY (word) REFERENCES words (id),
+    FOREIGN KEY (doc)  REFERENCES documents (id)
 );
 
-CREATE INDEX inverted_index_word(word);
+-- CREATE INDEX inverted_index_word(word);
 
 CREATE TABLE TFIDFs (
     doc   INTEGER,
     word  INTEGER,
     tfidf NUMERIC(10,9) NOT NULL,
     PRIMARY KEY (word, doc),
-    FOREIGN KEY (word) ON words(id),
-    FOREIGN KEY (doc) ON documents(id)
+    FOREIGN KEY (word) REFERENCES words (id),
+    FOREIGN KEY (doc)  REFERENCES documents (id)
 );
 
-CREATE INDEX tfidfs_word(word);
+-- CREATE INDEX tfidfs_word (word);
