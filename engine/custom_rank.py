@@ -4,7 +4,10 @@ from custom_db import get_doc_by_id, load_pages
 from sklearn.feature_extraction.text import TfidfVectorizer
 
 from tokenizer import process_text
+from custom_db import index_pages, get_num_docs, get_average_document_length, get_idf, get_tf
 
+from warnings import simplefilter
+simplefilter(action="ignore", category=pd.errors.PerformanceWarning)
 
 def preprocess_query(Q):
     tokenized_query = process_text(Q)
@@ -75,6 +78,9 @@ def generate_tf_idf_matrix():
     return features
 
 
+
+
+
 def rank_documents(subset_D, Q, X):
     # Filter the DataFrame to include only the documents in subset_D
     subset_adj = [x - 1 for x in subset_D]
@@ -122,6 +128,41 @@ def rank_documents(subset_D, Q, X):
 # docs = find_documents(query)
 X = generate_tf_idf_matrix()
 
+def bm_25(subset_D, Q):
+    print("Hier in bm25")
+    b=0.75
+    k=1.5
+    avgd = get_average_document_length()
+    N = get_num_docs()
+    subset_adj = [x - 1 for x in subset_D]
+    query_terms = preprocess_query(Q)
+    ranking = []
+    for doc_id in subset_adj:
+        score = 0
+        for term in query_terms:
+            tf = get_tf(doc_id, term)
+            idf = get_idf(term)
+            numerator = tf * (k + 1)
+            denominator = tf + k * (1 - b + b * N / avgd)
+            score += idf * numerator / denominator
+
+        # calculation finished, append to ranking    
+        doc = get_doc_by_id(doc_id)
+        title = str(doc['title'].values[0]) if not doc.empty else ""
+        url = str(doc['url'].values[0]) if not doc.empty else ""
+        snippet = str(doc['snippet'].values[0]) if not doc.empty else ""
+        result = {
+             "id": doc_id,
+            "title": title,
+            "url": url,
+            "description": snippet if snippet else "",
+            "summary": "",
+            "score": score
+        }
+        ranking.append(result)
+    
+    return ranking
+            
 
 # print(f"Found {len(docs)} documents, they look like this: {docs}")
 # print(f"Result: {generate_tf_idf_matrix('pages.csv')}")
@@ -131,7 +172,7 @@ X = generate_tf_idf_matrix()
 
 def rank(query):
     docs = find_documents(query)
-    return rank_documents(docs, query, X)
+    return bm_25(docs, query)
 
 
 def rank_from_file(filepath: str) -> list[list]:

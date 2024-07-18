@@ -2,6 +2,9 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS, cross_origin
 
 from custom_rank import rank
+import pandas as pd
+from warnings import simplefilter
+simplefilter(action="ignore", category=pd.errors.PerformanceWarning)
 
 PORT = 8000
 DEBUG = True

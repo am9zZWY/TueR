@@ -13,7 +13,7 @@ import signal
 import duckdb
 # Pipeline
 from crawl import Crawler
-from custom_db import index_pages, access_index, save_pages
+from custom_db import index_pages, access_index, save_pages, generate_tf, generate_idf
 from download import Downloader, Loader
 from summarize import Summarizer
 from tokenizer import Tokenizer
@@ -108,6 +108,8 @@ async def pipeline(from_crawl: bool = False):
                 element.save_state()
             index_pages()
             save_pages()
+            generate_idf()
+            generate_tf()
             index_df = access_index()
             index_df.to_csv("inverted_index.csv")
             con.close()
@@ -118,6 +120,8 @@ async def pipeline(from_crawl: bool = False):
         element.save_state()
     index_pages()
     save_pages()
+    generate_idf()
+    generate_tf()
     index_df = access_index()
     index_df.to_csv("inverted_index.csv")
     con.close()

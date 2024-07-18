@@ -6,6 +6,11 @@ from collections import defaultdict
 
 from pandas import DataFrame
 
+import math
+
+from warnings import simplefilter
+simplefilter(action="ignore", category=pd.errors.PerformanceWarning)
+
 # Create a DataFrame to store HTML pages
 headers = ['id', 'url', 'title', 'snippet', 'tokenized_text']
 pages_df = pd.DataFrame(columns=headers).astype({
@@ -17,7 +22,9 @@ pages_df = pd.DataFrame(columns=headers).astype({
 })
 inverted_index = defaultdict(list)
 inverted_index_df = pd.DataFrame(columns=['word', 'doc_ids'])
-
+idf_dict = defaultdict(float)
+df_tf = pd.DataFrame(columns=['doc_id', 'word'])
+df_tf.set_index("doc_id", inplace=True)
 
 def upsert_page_to_index(url: str):
     """
@@ -189,6 +196,44 @@ def load_inverted_index() -> pd.DataFrame:
     print("Loaded inverted index")
     return inverted_index_df
 
+def generate_tf():
+    print("Generiere TF")
+    global df_tf
+    tokens = get_tokens()
+    for indx, doc in enumerate(tokens): # indx = doc_id -1, doc = list of tokens
+        if indx%100 == 0:
+            print(f"Sind bei Doc {indx}")
+        for word in set(doc):
+            tf = doc.count(word)
+            df_tf.loc[indx, word] = tf
+    return df_tf
+
+def get_tf(word: str, doc_id: int) -> float:
+    global df_tf
+    return df_tf.loc(doc_id, word)
+
+
+def generate_idf():
+    print("Generiere IDF")
+    global inverted_index, idf_dict
+    num_docs = len(pages_df)
+    for word in inverted_index:
+        df = len(inverted_index[word])
+        idf = math.log(num_docs / df)
+        idf_dict[word] = idf
+
+def get_idf(word: str) -> float:
+    global idf_dict
+    return idf_dict.get(word, 0.0)
+
+def get_average_document_length():
+    tokens = get_tokens() # tokens contains a list of lists, which again contain the tokens of each document
+    # [[w1,w2,..,wn], []]
+    return sum([len(doc) for doc in set(tokens)]) / len(tokens)
+
+def get_num_docs():
+    return len(pages_df) # same as len(get_tokens())
+
 
 def load_pages() -> DataFrame | None:
     """
@@ -217,3 +262,5 @@ def load_pages() -> DataFrame | None:
 
 
 load_pages()
+generate_idf()
+generate_tf()
