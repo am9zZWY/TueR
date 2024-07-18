@@ -1,6 +1,7 @@
 -- Setup index database 'crawlies.db'
 
 -- DROP EVERYTHING
+DROP TABLE IF EXISTS crawled;
 DROP TABLE IF EXISTS TFIDFs;
 DROP TABLE IF EXISTS Inverted_Index;
 DROP TABLE IF EXISTS documents;
@@ -11,6 +12,12 @@ DROP SEQUENCE IF EXISTS word_ids;
 
 CREATE SEQUENCE doc_ids START 1;
 CREATE SEQUENCE word_ids START 1;
+
+CREATE TABLE crawled (
+    id      INTEGER DEFAULT nextval('doc_ids') PRIMARY KEY,
+    link    VARCHAR UNIQUE NOT NULL,
+    html    VARCHAR NOT NULL
+);
 
 CREATE TABLE documents (
     id          INTEGER DEFAULT nextval('doc_ids') PRIMARY KEY,
