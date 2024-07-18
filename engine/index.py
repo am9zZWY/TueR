@@ -16,15 +16,16 @@ class Indexer(PipelineElement):
 
         self.cursor = dbcon.cursor()
 
-        self._load_state()
+        # self._load_state()
 
     def __del__(self):
         self.cursor.close()
 
-    async def process(self, data, link):
+    async def process(self, data, link, doc_id=None):
         """
         Indexes the input data.
         """
+        print(f"Indexing {link}")
 
         if data is None:
             print(f"Failed to index {link} because the data was empty.")
@@ -40,14 +41,21 @@ class Indexer(PipelineElement):
         description = soup.find("meta", attrs={"name": "description"})
         description_content = description.get("content") if description is not None else ""
 
-        # Add more data to the index
-        upsert_page_to_index(url=link)
-        add_title_to_index(url=link, title=title_content)
-        add_snippet_to_index(url=link, snippet=description_content)
+        if doc_id:
+            self.cursor.execute("""
+                INSERT INTO documents(id, link, title, description)
+                VALUES (?, ?, ?, ?)
+            """, [doc_id, link, title_content, description_content])
+        else:
+            self.cursor.execute("""
+                INSERT INTO documents(link, title, description)
+                VALUES (?, ?, ?)
+            """, [link, title_content, description_content])
 
-        print(f"Indexed {link}")
+            doc_id = self.cursor.execute("SELECT id FROM documents WHERE link = ?", [link]).fetchone()[0]
+
         if not self.is_shutdown():
-            await self.propagate_to_next(soup, link)
+            await self.propagate_to_next(soup, doc_id, link)
 
     def _load_state(self):
         """
