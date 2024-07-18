@@ -39,11 +39,6 @@ with open('setup.sql', 'r') as statements:
 con.install_extension("fts")
 con.load_extension("fts")
 
-# Initialize the pipeline elements
-crawler = Crawler(con)
-crawler.max_size = 1000
-indexer = Indexer(con)
-tokenizer = Tokenizer(con)
 
 async def pipeline(from_crawl: bool = False):
     """
@@ -55,11 +50,11 @@ async def pipeline(from_crawl: bool = False):
     # Initialize the pipeline elements
     crawler = Crawler(con)
     crawler.max_size = 10000
-    indexer = Indexer()
-    tokenizer = Tokenizer()
-    downloader = Downloader()
-    loader = Loader()
-    summarizer = Summarizer()
+    indexer = Indexer(con)
+    tokenizer = Tokenizer(con)
+    downloader = Downloader(con)
+    loader = Loader(con)
+    summarizer = Summarizer(con)
 
     # Add the pipeline elements
     # Crawler: Crawl the website
@@ -112,6 +107,31 @@ async def pipeline(from_crawl: bool = False):
             index_df.to_csv("inverted_index.csv")
             con.close()
             print("State saved")
+
+    # Compute TF-IDF matrix
+    con.execute("""
+        WITH 
+        DocumentCount(total_docs) AS (
+            SELECT COUNT(*) FROM documents
+        ),
+        TermFrequence AS Inverted_Index,
+        DocumentFrequency(word, doc_count) AS (
+            SELECT word, COUNT(DISTINCT doc) AS doc_count
+            FROM   Inverted_Index
+        ),
+        TFIDF(doc, word, tfidf) AS (
+            SELECT tf.doc, tf.word,
+                   tf.amount * LOG((total_docs * 1.0) / df.doc_count)
+            FROM   TermFrequency AS tf,
+                   DocumentCount AS _(total_docs),
+                   DocumentFrequency AS df
+            WHERE  tf.word = df.word
+        )
+        INSERT INTO TFIDFs (doc, word, tfidf)
+            SELECT doc, word, tfidf
+            FROM   TFIDF
+            WHERE  tfidf > 0
+    """)
 
     # Save the state+
     for element in [crawler, indexer, tokenizer]:

@@ -1,5 +1,6 @@
 import asyncio
 import threading
+from concurrent.futures import ThreadPoolExecutor
 
 
 class PipelineElement:
@@ -33,11 +34,10 @@ class PipelineElement:
             try:
                 args = await asyncio.wait_for(self.task_queue.get(), timeout=1.0)
                 if asyncio.iscoroutinefunction(self.process):
-                    result = await self.process(*args)
+                    await self.process(*args)
                 else:
-                    result = await self.loop.run_in_executor(self.executor, self.process, *args)
+                    await self.loop.run_in_executor(self.executor, self.process, *args)
                 self.task_queue.task_done()
-                await self.propagate_to_next(result)
             except asyncio.TimeoutError:
                 continue  # No tasks available, continue checking
 
