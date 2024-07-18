@@ -226,8 +226,8 @@ class Tokenizer(PipelineElement):
         text = " ".join(all_text).strip()
 
         # Tokenize the text
+        tokenized_text: list[str] = process_text(text=text)
         try:
-            tokenized_text : list[str] = process_text(text=text)
             tokens = pd.DataFrame({'token': tokenized_text})
             tokens['doc_id'] = doc_id
             self.cursor.execute("""
@@ -248,7 +248,6 @@ class Tokenizer(PipelineElement):
             print(f"Error tokenizing text for {link}: {str(e)}")
             tokens = pd.DataFrame({'token': tokenized_text})
             tokens['doc_id'] = doc_id
-            print(doc_id)
 
 
 def clean_text(text):
