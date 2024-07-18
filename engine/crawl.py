@@ -279,7 +279,37 @@ class Crawler(PipelineElement):
         # Remove from currently crawled
         self.currently_crawled.remove(url)
         if not self.is_shutdown():
-            await self.call_next(soup, url)
+            await self.propagate_to_next(soup, url)
+
+    async def _fetch(self, session, url: str) -> str or None:
+        """
+        Fetches the content of a URL using the given session.
+        Args:
+            session: aiohttp ClientSession
+            url: URL to fetch
+
+        Returns: the HTML content of the URL
+        """
+
+        max_retries = self.max_retries
+        retry_delay = self.retry_delay
+
+        self._page_count += 1
+        for attempt in range(max_retries):
+            print(f"Fetching {url} (attempt {attempt + 1}/{max_retries})" if attempt > 0 else f"Fetching {url}")
+            try:
+                async with session.get(url, timeout=self._timeout, headers=self.headers) as response:
+                    response.raise_for_status()
+                    return await response.text()
+            except (TimeoutError, ClientError) as e:
+                if attempt == max_retries - 1:
+                    log_error(f"Failed to process {url} after {max_retries} attempts: {str(e)}")
+                    return
+                # Exponential wait time
+                await asyncio.sleep(retry_delay * (2 ** attempt))
+            except Exception as e:
+                log_error(f"Error fetching {url}: {e}")
+            return None
 
     async def _handle_links(self, soup: BeautifulSoup, url: str):
         """
@@ -331,36 +361,6 @@ class Crawler(PipelineElement):
                     and found_link.startswith("http")):
                 self.to_crawl_queue.append(found_link)
                 self.to_crawl_set.add(found_link)
-
-    async def _fetch(self, session, url: str) -> str or None:
-        """
-        Fetches the content of a URL using the given session.
-        Args:
-            session: aiohttp ClientSession
-            url: URL to fetch
-
-        Returns: the HTML content of the URL
-        """
-
-        max_retries = self.max_retries
-        retry_delay = self.retry_delay
-
-        self._page_count += 1
-        for attempt in range(max_retries):
-            print(f"Fetching {url} (attempt {attempt + 1}/{max_retries})" if attempt > 0 else f"Fetching {url}")
-            try:
-                async with session.get(url, timeout=self._timeout, headers=self.headers) as response:
-                    response.raise_for_status()
-                    return await response.text()
-            except (TimeoutError, ClientError) as e:
-                if attempt == max_retries - 1:
-                    log_error(f"Failed to process {url} after {max_retries} attempts: {str(e)}")
-                    return
-                # Exponential wait time
-                await asyncio.sleep(retry_delay * (2 ** attempt))
-            except Exception as e:
-                log_error(f"Error fetching {url}: {e}")
-            return None
 
     def save_state(self):
         """

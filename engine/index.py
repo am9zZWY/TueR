@@ -47,7 +47,7 @@ class Indexer(PipelineElement):
 
         print(f"Indexed {link}")
         if not self.is_shutdown():
-            await self.call_next(soup, link)
+            await self.propagate_to_next(soup, link)
 
     def _load_state(self):
         """
