@@ -1,5 +1,7 @@
 import re
 
+import duckdb
+import pandas as pd
 import spacy
 
 from custom_db import add_tokens_to_index
@@ -167,10 +169,14 @@ def process_text(text: str) -> list[str]:
 
 
 class Tokenizer(PipelineElement):
-    def __init__(self):
+    def __init__(self, dbcon: duckdb.DuckDBPyConnection):
         super().__init__("Tokenizer")
+        self.cursor = dbcon.cursor()
 
-    async def process(self, data, link):
+    def __del__(self):
+        self.cursor.close()
+
+    async def process(self, data, doc_id, link):
         """
         Tokenizes the input data.
         """
@@ -221,8 +227,21 @@ class Tokenizer(PipelineElement):
 
         # Tokenize the text
         try:
-            tokenized_text = process_text(text=text)
-            add_tokens_to_index(url=link, tokenized_text=tokenized_text)
+            tokenized_text : list[str] = process_text(text=text)
+            tokens = pd.DataFrame({'doc_id': doc_id, 'token': tokenized_text})
+            self.cursor.execute("""
+                INSERT INTO words(word)
+                SELECT DISTINCT token
+                FROM   tokens 
+            """)
+
+            self.cursor.execute("""
+                INSERT INTO Inverted_Index(word, doc, amount)
+                SELECT w.id, t.doc_id, COUNT(t.token)
+                FROM   tokens AS t, words AS w
+                WHERE  t.token = w.word
+                GROUP BY t.token
+            """)
             print(f"Tokenized text for {link}")
         except Exception as e:
             print(f"Error tokenizing text for {link}: {str(e)}")

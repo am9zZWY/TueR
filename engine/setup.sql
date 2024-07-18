@@ -16,7 +16,7 @@ CREATE SEQUENCE word_ids START 1;
 CREATE TABLE crawled (
     id      INTEGER DEFAULT nextval('doc_ids') PRIMARY KEY,
     link    VARCHAR UNIQUE NOT NULL,
-    html    VARCHAR NOT NULL
+    content BLOB NOT NULL
 );
 
 CREATE TABLE documents (
@@ -28,8 +28,9 @@ CREATE TABLE documents (
 );
 
 CREATE TABLE words (
-    word VARCHAR DEFAULT nextval('word_ids') PRIMARY KEY,
-    id   INTEGER DEFAULT nextval('word_ids') UNIQUE
+    word       VARCHAR PRIMARY KEY,
+    id         INTEGER DEFAULT nextval('word_ids') UNIQUE,
+    occurrences INTEGER NOT NULL
 );
 
 CREATE TABLE Inverted_Index (

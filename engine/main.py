@@ -39,11 +39,6 @@ with open('setup.sql', 'r') as statements:
 con.install_extension("fts")
 con.load_extension("fts")
 
-# Initialize the pipeline elements
-crawler = Crawler(con)
-crawler.max_size = 1000
-indexer = Indexer(con)
-tokenizer = Tokenizer(con)
 
 async def pipeline(from_crawl: bool = False):
     """
@@ -55,11 +50,11 @@ async def pipeline(from_crawl: bool = False):
     # Initialize the pipeline elements
     crawler = Crawler(con)
     crawler.max_size = 10000
-    indexer = Indexer()
-    tokenizer = Tokenizer()
-    downloader = Downloader()
-    loader = Loader()
-    summarizer = Summarizer()
+    indexer = Indexer(con)
+    tokenizer = Tokenizer(con)
+    downloader = Downloader(con)
+    loader = Loader(con)
+    summarizer = Summarizer(con)
 
     # Add the pipeline elements
     # Crawler: Crawl the website

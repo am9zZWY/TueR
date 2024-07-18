@@ -21,7 +21,7 @@ class Indexer(PipelineElement):
     def __del__(self):
         self.cursor.close()
 
-    async def process(self, data, link):
+    async def process(self, data, doc_id, link):
         """
         Indexes the input data.
         """
@@ -40,14 +40,14 @@ class Indexer(PipelineElement):
         description = soup.find("meta", attrs={"name": "description"})
         description_content = description.get("content") if description is not None else ""
 
-        # Add more data to the index
-        upsert_page_to_index(url=link)
-        add_title_to_index(url=link, title=title_content)
-        add_snippet_to_index(url=link, snippet=description_content)
+        self.cursor.execute("""
+            INSERT INTO documents(id, link, title, description)
+            VALUES (?, ?, ?, ?)
+        """, [doc_id, link, title_content, description_content])
 
         print(f"Indexed {link}")
         if not self.is_shutdown():
-            await self.propagate_to_next(soup, link)
+            await self.propagate_to_next(soup, doc_id, link)
 
     def _load_state(self):
         """

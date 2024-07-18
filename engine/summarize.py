@@ -1,3 +1,4 @@
+import duckdb
 from transformers import pipeline
 
 from pipeline import PipelineElement
@@ -24,10 +25,14 @@ class Summarizer(PipelineElement):
     Summarizes the input text.
     """
 
-    def __init__(self):
+    def __init__(self, dbcon: duckdb.DuckDBPyConnection):
         super().__init__("Summarizer")
+        self.cursor = dbcon.cursor()
 
-    async def process(self, data, link):
+    def __del__(self):
+        self.cursor.close()
+
+    async def process(self, data, doc_id, link):
         """
         Summarizes the input text.
         """
@@ -47,6 +52,13 @@ class Summarizer(PipelineElement):
         text = main_content.get_text()
 
         summary = summarize_text(text)
+
+        self.cursor.execute("""
+            UPDATE documents
+            ON     summary = ?
+            WHERE  id = ?
+        """, [summary, doc_id])
+
         print(f"Summarized {link} to: {summary}")
 
         if not self.is_shutdown():
