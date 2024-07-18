@@ -21,10 +21,11 @@ class Indexer(PipelineElement):
     def __del__(self):
         self.cursor.close()
 
-    async def process(self, data, link, doc_id = None):
+    async def process(self, data, link, doc_id=None):
         """
         Indexes the input data.
         """
+        print(f"Indexing {link}")
 
         if data is None:
             print(f"Failed to index {link} because the data was empty.")
@@ -53,7 +54,6 @@ class Indexer(PipelineElement):
 
             doc_id = self.cursor.execute("SELECT id FROM documents WHERE link = ?", [link]).fetchone()[0]
 
-        print(f"Indexed {link}")
         if not self.is_shutdown():
             await self.propagate_to_next(soup, doc_id, link)
 
