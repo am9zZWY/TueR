@@ -30,9 +30,20 @@ nest_asyncio.apply()
 
 # Database setup
 con = duckdb.connect("crawlies.db")
+with open('setup.sql', 'r') as statements:
+    # Execute each statement
+    for statement in statements.read().split(';'):
+        if statement.strip():  # Skip empty statements
+            con.execute(statement)
+
 con.install_extension("fts")
 con.load_extension("fts")
 
+# Initialize the pipeline elements
+crawler = Crawler(con)
+crawler.max_size = 1000
+indexer = Indexer(con)
+tokenizer = Tokenizer(con)
 
 async def pipeline(from_crawl: bool = False):
     """

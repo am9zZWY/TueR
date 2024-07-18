@@ -1,4 +1,6 @@
-
+import logging
+import duckdb
+import pandas as pd
 
 from custom_db import upsert_page_to_index, add_title_to_index, add_snippet_to_index, load_pages
 from pipeline import PipelineElement
@@ -9,10 +11,15 @@ class Indexer(PipelineElement):
     Adds the data to the index.
     """
 
-    def __init__(self):
+    def __init__(self, dbcon: duckdb.DuckDBPyConnection):
         super().__init__("Indexer")
 
+        self.cursor = dbcon.cursor()
+
         self._load_state()
+
+    def __del__(self):
+        self.cursor.close()
 
     async def process(self, data, link):
         """

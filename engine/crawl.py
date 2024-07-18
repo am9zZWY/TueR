@@ -400,8 +400,6 @@ class Crawler(PipelineElement):
 # IMPORTANT: Please use main.py instead of this file
 if __name__ == "__main__":
     con = duckdb.connect("crawlies.db")
-    con.install_extension("fts")
-    con.load_extension("fts")
 
     crawler = Crawler(con)
     crawler.process()
