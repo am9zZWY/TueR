@@ -5,7 +5,7 @@ from functools import lru_cache
 import bisect
 import numpy as np
 from custom_db import get_tokens, load_pages, get_page_by_id
-from tokenizer import process_text
+from tokenizer import process_and_expand_query
 import pandas as pd
 load_pages()
 
@@ -61,9 +61,7 @@ def IDF():
 
 idf = IDF()
 
-def preprocess_query(Q):
-    tokenized_query = process_text(Q)
-    return tokenized_query
+
 
 
 def find_documents(query) -> set:
@@ -88,7 +86,8 @@ def bm25(query: str, k1=1.5, b=0.75):
     global tokens, tf, idf, bow
 
     # Create the query vector
-    query = preprocess_query(query)
+    
+    query, expanded_query = process_and_expand_query(query)
     # Calculate the BM25 scores
     scores = []
     L = len(tokens)  # TODO: Average document length
@@ -98,12 +97,26 @@ def bm25(query: str, k1=1.5, b=0.75):
         for word in query:
             if word not in bow:
                 continue
+            weight = 1 if word in expanded_query.keys() else 4
+            
             i = bow.index(word)
             idf_val = idf[i]
             tf_val = tf[index][i]
             # if tf_val != 0:
             #     # print(f"tf_val: {tf_val}")
-            score += idf_val * (tf_val * (k1 + 1)) / (tf_val + k1 * (1 - b + b * L_d / L))
+            score += weight * idf_val * (tf_val * (k1 + 1)) / (tf_val + k1 * (1 - b + b * L_d / L))
+        for sims in expanded_query.values():
+            for word, weight in sims:
+                if weight < 0.7:
+                    continue
+                if word not in bow:
+                    continue
+                i = bow.index(word)
+                idf_val = idf[i]
+                tf_val = tf[index][i]
+                # if tf_val != 0:
+                #     # print(f"tf_val: {tf_val}")
+                score += weight/3 * (idf_val * (tf_val * (k1 + 1)) / (tf_val + k1 * (1 - b + b * L_d / L)))
         scores.append(score)
 
     # Map document ID to document with title, URL, and snippet
@@ -132,5 +145,5 @@ def rank(query):
     return bm25(query)
 
 
-res = rank("food and drink")
+res = rank("Tübingen publications")
 print(res[:10])

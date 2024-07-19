@@ -7,13 +7,18 @@ import spacy
 from custom_db import add_tokens_to_index
 from pipeline import PipelineElement
 
+from similarity import most_similar
+
+from nltk.stem import WordNetLemmatizer
+import nltk
+
 """
 IMPORTANT:
 Make sure you install the spaCy model with:
 python -m spacy download en_core_web_sm
 """
 
-
+nltk.download('wordnet')
 # Define regular expressions for preprocessing
 
 def remove_html(text: str) -> str:
@@ -145,12 +150,37 @@ def preprocess_text(text: str) -> str:
 print("Loading spaCy model...")
 nlp = spacy.load("en_core_web_sm", disable=["tok2vec", "parser", "senter"])
 
+def process_and_expand_query(query: str):
 
-def process_text(text: str) -> list[str]:
+    processed_query = preprocess_text(query)
+    doc = nlp(processed_query)
+    wnl = WordNetLemmatizer()
+    # TODO Spell checking
+
+    tokens = []
+
+    
+    proccessed_sim_words = {}
+    for token in doc:
+        if token.is_stop or token.is_punct or token.is_space:
+            continue
+        token = token.lemma_ if token.pos_ in ["NOUN", "PROPN"] else token.text
+        tokens.append(token)
+        
+        # generate similiar words and lemmatize
+        #  TODO check if we need preprocessing aswell
+        sim_words = most_similar(token)
+        proccessed_sim_words[token]=list(map(lambda x: (wnl.lemmatize(x[0].lower()), x[1]), sim_words))
+    
+    return tokens, proccessed_sim_words
+
+
+def process_text(text: str, qe_flag: bool=False) -> list[str] | list[tuple]:
     """Process text using spaCy and custom logic."""
 
     # Preprocess the text
     text = preprocess_text(text)
+    
 
     # Process with spaCy
     doc = nlp(text)
@@ -159,6 +189,7 @@ def process_text(text: str) -> list[str]:
         if token.is_stop or token.is_punct or token.is_space:
             continue
         # Use the lemma for nouns and proper nouns
+
         token = token.lemma_ if token.pos_ in ["NOUN", "PROPN"] else token.text
         tokens.append(token)
 
@@ -317,7 +348,12 @@ test_sentences = [
 
 if __name__ == "__main__":
 
-    for sentence in test_sentences:
-        print(f"Original: {sentence}")
-        print(f"Tokenized: {process_text(sentence)}")
-        print()
+    # for sentence in test_sentences:
+    #     print(f"Original: {sentence}")
+    #     print(f"Tokenized: {process_text(sentence)}")
+    #     print()
+
+    print(expand_query("I live in New York City"))
+    wnl = WordNetLemmatizer()
+    print(wnl.lemmatize("chases"))
+    print([token.lemma_ for token in nlp("chases")])

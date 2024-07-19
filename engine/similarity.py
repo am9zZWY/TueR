@@ -4,7 +4,7 @@ import time
 
 
 # Step 4: Query the model directly
-def most_similar(word, topn=10):
+def most_similar(word, topn=7):
     try:
         model = gensim.models.KeyedVectors.load('./glove-wiki-gigaword-100.model')
     except FileNotFoundError:
@@ -14,12 +14,10 @@ def most_similar(word, topn=10):
         model.save('glove-wiki-gigaword-100.model')
         print("Model downloaded and saved")
     try:
-        return model.most_similar(word, topn=topn)
+        most_sim = model.most_similar(word, topn=topn)
+        print(f"Most similar words to {word}: {most_sim}")
+        return most_sim
     except KeyError:
         return []
 
 # Example query
-start_time = time.time()
-similar_words = most_similar('juice', topn=10)
-print(similar_words)
-print(f"Duration: {time.time() - start_time}")
