@@ -2,10 +2,11 @@
 import math
 from collections import Counter, defaultdict
 from functools import lru_cache
-
+import bisect
 import numpy as np
 from custom_db import get_tokens, load_pages, get_page_by_id
-
+from tokenizer import process_text
+import pandas as pd
 load_pages()
 
 tokens = get_tokens()
@@ -60,6 +61,25 @@ def IDF():
 
 idf = IDF()
 
+def preprocess_query(Q):
+    tokenized_query = process_text(Q)
+    return tokenized_query
+
+
+def find_documents(query) -> set:
+    df_inverted = pd.read_csv("inverted_index.csv", converters={'doc_ids': pd.eval})
+    df_inverted.set_index("word", inplace=True)
+    df_inverted.drop(columns=["Unnamed: 0"], inplace=True)
+    result = []
+    for token in query:
+        if token in df_inverted.index.values:
+            doc_ids = df_inverted.loc[token].doc_ids
+            result.append(doc_ids)
+    intersection = set(result[0]).intersection(*result)
+    if len(intersection) < 2:
+        return set(result[0]).union(*result)
+    return intersection
+
 
 def bm25(query: str, k1=1.5, b=0.75):
     """
@@ -68,17 +88,22 @@ def bm25(query: str, k1=1.5, b=0.75):
     global tokens, tf, idf, bow
 
     # Create the query vector
-    query_vector = [0] * len(bow)
-    for word in query.split():
-        query_vector[bow.index(word)] += 1
-
+    query = preprocess_query(query)
     # Calculate the BM25 scores
     scores = []
+    L = len(tokens)  # TODO: Average document length
     for index, doc in enumerate(tokens):
+        L_d = len(doc)
         score = 0
-        for word in query.split():
+        for word in query:
+            if word not in bow:
+                continue
             i = bow.index(word)
-            score += idf[i] * (tf[index][i] * (k1 + 1)) / (tf[index][i] + k1 * (1 - b + b * len(doc) / len(tokens)))
+            idf_val = idf[i]
+            tf_val = tf[index][i]
+            # if tf_val != 0:
+            #     # print(f"tf_val: {tf_val}")
+            score += idf_val * (tf_val * (k1 + 1)) / (tf_val + k1 * (1 - b + b * L_d / L))
         scores.append(score)
 
     # Map document ID to document with title, URL, and snippet
@@ -98,10 +123,14 @@ def bm25(query: str, k1=1.5, b=0.75):
             "summary": "",
             "score": score
         }
-        ranking.append(result)
+        bisect.insort(ranking, result, key=lambda x: -1* x['score'])
 
     return ranking
 
 
 def rank(query):
     return bm25(query)
+
+
+res = rank("food and drink")
+print(res[:10])
