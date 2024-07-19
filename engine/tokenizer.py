@@ -4,7 +4,6 @@ import duckdb
 import pandas as pd
 import spacy
 
-from custom_db import add_tokens_to_index
 from pipeline import PipelineElement
 
 """
