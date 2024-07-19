@@ -6,7 +6,7 @@
       <div class="flex justify-between items-start">
         <div class="flex flex-col">
           <a :href="result.url"
-             class="text-xl font-semibold text-primary-600 hover:text-primary-700 transition duration-300"
+             class="text-xl font-semibold text-primary-600 hover:text-primary-700 transition duration-300 hover:underline underline-offset-2"
              target="_blank">
             {{ result.title }}
           </a>
@@ -23,8 +23,8 @@
           {{ tag }}
         </span>
       </div>
-      <div class="mt-4" v-if="!showSummary">
-        <button @click="showSummary = true"
+      <div class="mt-4" v-if="summary == ''">
+        <button @click="generateSummary"
                 class="text-sm text-primary-600 hover:text-primary-700 font-medium focus:outline-none">
           Generate Summary
         </button>
@@ -37,7 +37,7 @@
         leave-from-class="opacity-100 transform scale-100"
         leave-to-class="opacity-0 transform scale-95"
       >
-        <p v-if="showSummary" class="text-sm text-gray-500 mt-3 leading-relaxed">
+        <p v-if="summary !== ''" class="text-sm text-gray-500 mt-3 leading-relaxed">
           {{ result.summary }}
         </p>
       </transition>
@@ -69,12 +69,17 @@ interface SearchResultProps {
 
 const { result } = defineProps<SearchResultProps>()
 
-const showSummary = ref(false)
+const summary = ref('')
 const preview = ref('')
 
 const downloadPreview = async () => {
   const response = await fetch(`${ENGINE_ENDPOINT}/preview?url=${result.url}`)
   preview.value = URL.createObjectURL(await response.blob())
+}
+
+const generateSummary = async () => {
+  const response = await fetch(`${ENGINE_ENDPOINT}/summary/${result.id}`)
+  summary.value = await response.text()
 }
 
 //watch(() => result.url, downloadPreview, { immediate: true })
