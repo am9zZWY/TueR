@@ -14,6 +14,7 @@ import duckdb
 # Pipeline
 from crawl import Crawler
 from custom_db import index_pages, access_index, save_pages
+from custom_rank import rank_from_file
 from download import Downloader, Loader
 from summarize import Summarizer
 from tokenizer import Tokenizer
@@ -40,7 +41,7 @@ con.install_extension("fts")
 con.load_extension("fts")
 
 
-async def pipeline(from_crawl: bool = False):
+async def pipeline(online: bool = True):
     """
     Start the crawling, tokenizing, and indexing pipeline
     Returns:
@@ -60,7 +61,7 @@ async def pipeline(from_crawl: bool = False):
     # Crawler: Crawl the website
     crawler.add_next(downloader)
     crawler.add_next(indexer)
-    #crawler.add_next(summarizer)
+    # crawler.add_next(summarizer)
 
     # Loader: Load the pages from the disk
     loader.add_next(indexer)
@@ -71,7 +72,7 @@ async def pipeline(from_crawl: bool = False):
 
     def signal_handler(signum, frame):
         print("Interrupt received, shutting down... Please wait. This may take a few seconds.")
-        for element in [crawler, indexer, downloader, tokenizer]:
+        for element in [crawler, indexer, downloader, tokenizer, loader, summarizer]:
             element.shutdown()
 
     signal.signal(signal.SIGINT, signal_handler)
@@ -86,12 +87,12 @@ async def pipeline(from_crawl: bool = False):
         loader.add_executor(executor)
 
         # Start the pipeline
-        if from_crawl:
+        if online:
             asyncio.run(crawler.process())
         else:
             asyncio.run(loader.process())
         try:
-            if from_crawl:
+            if online:
                 await crawler.process()
             else:
                 await loader.process()
@@ -144,33 +145,33 @@ async def pipeline(from_crawl: bool = False):
     print("State saved")
 
 
-def parse_query(filepath) -> list[str]:
-    with open(filepath, "r") as file:
-        queries = file.readlines()
-    return queries
-
-
 def main():
     # Parse the command line arguments
     parser = argparse.ArgumentParser(description=f"Find anything with {ENGINE_NAME}!")
-    parser.add_argument("-q", "--queries", help="Queries file", default="queries.txt", type=str, required=False)
-    parser.add_argument("-p", "--pipe", help="Run the pipeline", action="store_true", required=False)
-    parser.add_argument("-l", "--load", help="Run pipeline from disk", action="store_true", required=False)
+    parser.add_argument("--online", help="Run pipeline from the web (online)", action="store_true", required=False)
+    parser.add_argument("--offline", help="Run pipeline from the disk (offline)", action="store_true", required=False)
     parser.add_argument("-s", "--server", help="Run the server", action="store_true", required=False)
+    parser.add_argument("-f", "--file", help="Queries file", default="queries.txt", type=str, required=False)
+    parser.add_argument("-d", "--debug", help="Debug mode", action="store_true", required=False)
 
     try:
         args = parser.parse_args()
 
         # Start the pipeline
-        if args.pipe:
+        if args.online:
             # Crawl the websites and start the pipeline
-            asyncio.run(pipeline(from_crawl=True))
-        elif args.load:
+            asyncio.run(pipeline(online=True))
+        elif args.offline:
             # Load the pages from the disk and start the pipeline
-            asyncio.run(pipeline(from_crawl=False))
+            asyncio.run(pipeline(online=False))
         elif args.server:
             # Start the server
-            start_server()
+            start_server(debug=args.debug)
+        elif args.file:
+            # Rank the queries from the file
+            queries = rank_from_file(args.file)
+            for i, query in enumerate(queries):
+                print(f"Query {i + 1}: {query}")
         else:
             parser.print_help()
 
