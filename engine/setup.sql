@@ -2,8 +2,8 @@
 
 -- DROP EVERYTHING
 DROP TABLE IF EXISTS crawled;
-DROP TABLE IF EXISTS TFIDFs;
-DROP TABLE IF EXISTS Inverted_Index;
+DROP TABLE IF EXISTS IDFs;
+DROP TABLE IF EXISTS TFs;
 DROP TABLE IF EXISTS documents;
 DROP TABLE IF EXISTS words;
 
@@ -32,24 +32,17 @@ CREATE TABLE words (
     id          INTEGER DEFAULT nextval('word_ids') UNIQUE,
 );
 
-CREATE TABLE Inverted_Index (
-    word   INTEGER,
-    doc    INTEGER,
-    amount INTEGER,
+CREATE TABLE TFs (
+    word INTEGER,
+    doc  INTEGER,
+    tf   INTEGER,
     PRIMARY KEY (word, doc),
     FOREIGN KEY (word) REFERENCES words (id),
     FOREIGN KEY (doc)  REFERENCES documents (id)
 );
 
--- CREATE INDEX inverted_index_word(word);
-
-CREATE TABLE TFIDFs (
-    doc   INTEGER,
-    word  INTEGER,
-    tfidf NUMERIC(10,9) NOT NULL,
-    PRIMARY KEY (word, doc),
-    FOREIGN KEY (word) REFERENCES words (id),
-    FOREIGN KEY (doc)  REFERENCES documents (id)
-);
-
--- CREATE INDEX tfidfs_word (word);
+CREATE TABLE IDFs (
+    word INTEGER PRIMARY KEY,
+    idf  DOUBLE NOT NULL,
+    FOREIGN KEY (word) REFERENCES words (id)
+)

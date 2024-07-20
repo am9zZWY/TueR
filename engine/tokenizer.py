@@ -4,7 +4,6 @@ import duckdb
 import pandas as pd
 import spacy
 
-from custom_db import add_tokens_to_index
 from pipeline import PipelineElement
 
 from similarity import most_similar
@@ -270,7 +269,7 @@ class Tokenizer(PipelineElement):
             """)
 
             self.cursor.execute("""
-                INSERT INTO Inverted_Index(word, doc, amount)
+                INSERT INTO TFs(word, doc, tf)
                 SELECT w.id, t.doc_id, COUNT(*)
                 FROM   tokens AS t, words AS w
                 WHERE  t.token = w.word

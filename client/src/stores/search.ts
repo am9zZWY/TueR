@@ -1,16 +1,7 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import { ENGINE_ENDPOINT } from '@/configuration'
-
-export interface SearchResult {
-  id: number
-  title: string
-  url: string
-  description: string
-  summary: string,
-  score?: number
-  tags?: string[]
-}
+import type { SearchResult } from '@/types'
 
 const dummyResults: SearchResult[] = [
   {
