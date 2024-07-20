@@ -1,155 +1,104 @@
-
-import math
-from collections import Counter, defaultdict
-from functools import lru_cache
-import bisect
-import numpy as np
-from custom_db import get_tokens, load_pages, get_page_by_id
+import duckdb
 from tokenizer import process_and_expand_query
 import pandas as pd
-load_pages()
-
-tokens = get_tokens()
 
 
-@lru_cache(maxsize=None)
-def BOW() -> list[str]:
-    """
-    Create a vocabulary from a list of tokens.
-    """
-    global tokens
-    return sorted(set([word for doc in tokens for word in doc]))
-
-
-bow = BOW()
-
-
-def TF() -> np.ndarray:
-    """
-    Turn a corpus of arbitrary texts into term-frequency weighted BOW vectors.
-    """
-    global tokens, bow
-
-    # Create a dictionary for faster lookups
-    bow_dict = {word: idx for idx, word in enumerate(bow)}
-
-    # Precompute word frequencies for each document
-    doc_word_counts = [Counter(doc) for doc in tokens]
-
-    # Create BOW vectors using NumPy
-    bow_vectors = np.zeros((len(tokens), len(bow)), dtype=int)
-
-    for doc_idx, word_counts in enumerate(doc_word_counts):
-        for word, count in word_counts.items():
-            if word in bow_dict:
-                bow_vectors[doc_idx, bow_dict[word]] = count
-
-    return bow_vectors
-
-
-tf = TF()
-
-
-def IDF():
-    """
-    Estimate inverse document frequencies based on a corpus of documents.
-    """
-    global tokens
-
-    return np.array([math.log(len(tokens) / sum(col)) for col in zip(*tf)])
-
-
-idf = IDF()
-
-
-
-
-def find_documents(query) -> set:
-    df_inverted = pd.read_csv("inverted_index.csv", converters={'doc_ids': pd.eval})
-    df_inverted.set_index("word", inplace=True)
-    df_inverted.drop(columns=["Unnamed: 0"], inplace=True)
-    result = []
-    for token in query:
-        if token in df_inverted.index.values:
-            doc_ids = df_inverted.loc[token].doc_ids
-            result.append(doc_ids)
-    intersection = set(result[0]).intersection(*result)
-    if len(intersection) < 2:
-        return set(result[0]).union(*result)
-    return intersection
-
-
-def bm25(query: str, k1=1.5, b=0.75):
+def bm25(query: str, dbcon: duckdb.DuckDBPyConnection, k1=1.5, b=0.75, debug: bool = False):
     """
     Rank documents by BM25.
     """
-    global tokens, tf, idf, bow
 
     # Create the query vector
-    
     query, expanded_query = process_and_expand_query(query)
 
-    # add strings from expanded_query to query
-    print(f"expanded_query: {expanded_query}")
-    db_query = set(query + [word for sim_list in expanded_query.values() for word, score in sim_list if score > 0.7])
-    print(f"db_query: {db_query}")
-    print(f"Query: {query}")
+    # flatten expanded query terms
+    sim_weight_list = [(word, score)
+                       for sim_list in expanded_query.values()
+                       for word, score in sim_list
+                       if score > 0.7 and word not in query]
+
+    # Search terms to look up tf and idf for
+    search_terms = set(query).union(set(map(lambda x: x[0], sim_weight_list)))
+
+    if debug:
+        print(f"expanded_query: {expanded_query}")
+        print(f"db_query: {search_terms}")
+        print(f"Query: {query}")
+
+    con = dbcon  # Rename DB connection
+
+    # DataFrame to directly query in DuckDB
+    df_search = pd.DataFrame(sorted(search_terms), columns=['search_terms'])
+
+    # Query TF and IDf for desired search terms
+    df_tf = con.execute("""
+        SELECT t.doc, w.word, t.amount
+        FROM   tfs AS t, words AS w, df_search AS _(token)
+        WHERE  w.word = token AND w.id = t.word;
+    """).df().set_index(['doc', 'word'])['amount']
+
+    df_idf = con.execute("""
+        SELECT w.word, i.idf
+        FROM   idfs AS i, words AS w, df_search AS _(token)
+        WHERE  w.word = token AND w.id = i.word;
+    """).df().set_index(['word'])['idf']
+
     # Calculate the BM25 scores
     scores = []
-    L = len(tokens)  # TODO: Average document length
-    for index, doc in enumerate(tokens):
-        L_d = len(doc)
+
+    L = con.execute("SELECT COUNT(*) FROM documents").fetchall()[0][0]
+
+    # Iterate over documents
+    for doc_id in df_tf.index.get_level_values('doc').unique().tolist():
+        doc_tf = df_tf.loc[doc_id]
+
+        # Get words found for document
+        words = set(doc_tf.index.get_level_values('word').tolist())
+        L_d = len(words)
+
         score = 0
-        for word in query:
-            if word not in bow:
-                continue
-            weight = 1 if word in expanded_query.keys() else 4
-            
-            i = bow.index(word)
-            idf_val = idf[i]
-            tf_val = tf[index][i]
-            # if tf_val != 0:
-            #     # print(f"tf_val: {tf_val}")
+
+        # Calculate "classic" BM25 for only query terms
+        for word in set(query).intersection(words):
+            weight = 4 if not expanded_query[word] else 1  # weight synonym-less words higher
+
+            idf_val = df_idf[word]
+            tf_val = doc_tf[word]
+
             score += weight * idf_val * (tf_val * (k1 + 1)) / (tf_val + k1 * (1 - b + b * L_d / L))
-        for sims in expanded_query.values():
-            for word, weight in sims:
-                if weight < 0.7:
-                    continue
-                if word not in bow:
-                    continue
-                i = bow.index(word)
-                idf_val = idf[i]
-                tf_val = tf[index][i]
-                # if tf_val != 0:
-                #     # print(f"tf_val: {tf_val}")
-                score += weight/3 * (idf_val * (tf_val * (k1 + 1)) / (tf_val + k1 * (1 - b + b * L_d / L)))
-        scores.append(score)
 
-    # Map document ID to document with title, URL, and snippet
-    ranking = []
-    for index, score in enumerate(scores):
-        doc = get_page_by_id(index)
+        # Calculate BM25 for expanded query terms
+        for synonym, weight in filter(lambda x: x[0] in words, sim_weight_list):
+            idf_val = df_idf[synonym]
+            tf_val = doc_tf[synonym]
 
-        title = str(doc['title'].values[0]) if not doc.empty else ""
-        url = str(doc['url'].values[0]) if not doc.empty else ""
-        snippet = str(doc['snippet'].values[0]) if not doc.empty else ""
+            score += weight / 3 * (idf_val * (tf_val * (k1 + 1)) / (tf_val + k1 * (1 - b + b * L_d / L)))
 
-        result = {
-            "id": index,
-            "title": title,
-            "url": url,
-            "description": snippet if snippet else "",
-            "summary": "",
-            "score": score
-        }
-        bisect.insort(ranking, result, key=lambda x: -1* x['score'])
+        scores.append((doc_id, score))
+
+    # Retrieve Document information from DB in ranked fashion
+    df_scores = pd.DataFrame(scores, columns=['doc', 'score'])
+    ranking = con.execute("""
+        SELECT d.id AS id, d.title AS title, d.link AS url, 
+               d.description AS description, d.summary AS summary, 
+               s.score AS score
+        FROM   documents AS d, df_scores AS s
+        WHERE  d.id = s.doc
+        ORDER BY s.score DESC
+    """).df().to_dict('records')
+
+    con.close()
 
     return ranking
 
 
-def rank(query):
-    return bm25(query)
+def rank(query: str, debug: bool = False):
+    con = duckdb.connect('crawlies.db')
+    return bm25(query, con, debug=debug)
 
 
-res = rank("food an drink")
-print(res[:10])
+if __name__ == '__main__':
+    res = rank("food an drink", debug=True)
+    print(res[:10])
+    res = rank("Tübingen publications", debug=True)
+    print(res[:10])
