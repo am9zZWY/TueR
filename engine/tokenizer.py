@@ -175,7 +175,7 @@ def process_and_expand_query(query: str):
     return tokens, proccessed_sim_words
 
 
-def process_text(text: str, qe_flag: bool=False) -> list[str] | list[tuple]:
+def process_text(text: str) -> list[str] | list[tuple]:
     """Process text using spaCy and custom logic."""
 
     # Preprocess the text
@@ -353,7 +353,5 @@ if __name__ == "__main__":
     #     print(f"Tokenized: {process_text(sentence)}")
     #     print()
 
-    print(expand_query("I live in New York City"))
-    wnl = WordNetLemmatizer()
-    print(wnl.lemmatize("chases"))
-    print([token.lemma_ for token in nlp("chases")])
+    dummy_query = "and the finally the what the I am the only tiger in the house"
+    print(process_and_expand_query(dummy_query))
