@@ -23,10 +23,10 @@
           {{ tag }}
         </span>
       </div>
-      <div class="mt-4" v-if="summary == ''">
-        <button @click="generateSummary"
+      <div class="mt-4">
+        <button @click="toggleSummary"
                 class="text-sm text-primary-600 hover:text-primary-700 font-medium focus:outline-none">
-          Generate Summary
+          {{ showSummary ? 'Hide' : 'Show' }} Summary
         </button>
       </div>
       <transition
@@ -37,21 +37,21 @@
         leave-from-class="opacity-100 transform scale-100"
         leave-to-class="opacity-0 transform scale-95"
       >
-        <p v-if="summary !== ''" class="text-sm text-gray-500 mt-3 leading-relaxed">
-          {{ result.summary }}
+        <p v-if="showSummary" class="text-sm text-gray-500 mt-3 leading-relaxed">
+          {{ summary }}
         </p>
       </transition>
     </div>
 
     <!-- Right side: Preview -->
-    <div class="w-1/2 p-5">
-      <div class="flex justify-end" v-if="preview == ''">
-        <button @click="downloadPreview"
+    <div class="w-1/2 p-10">
+      <div class="flex justify-end">
+        <button @click="togglePreview"
                 class="text-sm text-primary-600 hover:text-primary-700 font-medium focus:outline-none">
-          Show Preview
+          {{ preview ? 'Hide' : 'Show' }} Preview
         </button>
       </div>
-      <div class="rounded-2xl h-full flex items-center justify-center" v-if="preview">
+      <div class="rounded-2xl h-full flex items-center justify-center" v-if="showPreview">
         <iframe :src="preview" class="w-full h-full rounded-2xl" />
       </div>
     </div>
@@ -69,15 +69,28 @@ interface SearchResultProps {
 
 const { result } = defineProps<SearchResultProps>()
 
+const showSummary = ref(false)
 const summary = ref('')
+
+const showPreview = ref(false)
 const preview = ref('')
 
-const downloadPreview = async () => {
+const togglePreview = async () => {
+  showPreview.value = !showPreview.value
+  if (preview.value) {
+    return
+  }
+
   const response = await fetch(`${ENGINE_ENDPOINT}/preview?url=${result.url}`)
   preview.value = URL.createObjectURL(await response.blob())
 }
 
-const generateSummary = async () => {
+const toggleSummary = async () => {
+  showSummary.value = !showSummary.value
+  if (result.summary) {
+    return
+  }
+
   const response = await fetch(`${ENGINE_ENDPOINT}/summary/${result.id}`)
   summary.value = await response.text()
 }

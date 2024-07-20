@@ -12,14 +12,16 @@
         <input
           class="w-full bg-gray-100 rounded-full py-3 px-6 pr-12 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-tertiary-800 focus:bg-white transition duration-300"
           type="text"
-          placeholder="Search the coolness..."
+          placeholder="Hold the door..."
           aria-label="Search"
-          v-model="query"
+          v-model.trim="query"
           @keyup.enter="search"
         />
         <button
+          :class="{ 'bg-gray-200 bg-none': query.length === 0 }"
           class="absolute right-1.5 top-0.5 bg-gradient-to-bl from-primary-700 to-secondary-400 text-white rounded-full p-2 hover:from-primary-700 hover:to-tertiary-800 transition duration-300"
           type="button"
+          :disabled="query.length === 0"
           @click="search"
         >
           <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -28,27 +30,37 @@
           </svg>
         </button>
       </div>
-      <div v-if="loading" class="text-center text-gray-600">
+      <div>
+        <h4 class="font-semibold text-gray-600 mb-2">Last Searches</h4>
+        <span v-for="(lastSearch, index) in lastSearches.slice(lastSearches.length - 3, lastSearches.length)"
+              class="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-medium cursor-pointer hover:bg-gray-200 hover:text-gray-700 transition duration-300"
+              :key="`{lastSearch}-${index}`" @click="query = lastSearch">
+          {{ lastSearch }}
+        </span>
+      </div>
+      <div v-if="loading" class="text-center text-gray-600 mt-8">
         <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-tertiary-500 mx-auto"></div>
         <p class="mt-4">{{ TITLE }}</p>
       </div>
-      <div v-else>
+      <div v-else class="space-y-6 mt-8">
         <!-- Search Results -->
-        <ul class="space-y-6">
-          <transition-group
-            tag="ul"
-            class="space-y-6"
-            :css="false"
-            @before-enter="onBeforeEnter"
-            @enter="onEnter"
-            @leave="onLeave"
-          >
-            <li v-for="result in results" :key="result.id"
-                class="bg-white rounded-lg border border-gray-200 shadow-sm transition-all duration-300 hover:shadow-md overflow-hidden">
-              <SearchResult :result="result" :key="result.id" :data-index="results.indexOf(result)" />
-            </li>
-          </transition-group>
-        </ul>
+        <transition-group
+          v-if="results.length > 0"
+          tag="ul"
+          class="space-y-6"
+          :css="false"
+          @before-enter="onBeforeEnter"
+          @enter="onEnter"
+          @leave="onLeave"
+        >
+          <li v-for="result in results" :key="result.id"
+              class="bg-white rounded-lg border border-gray-200 shadow-sm transition-all duration-300 hover:shadow-md overflow-hidden">
+            <SearchResult :result="result" :key="result.id" :data-index="results.indexOf(result)" />
+          </li>
+        </transition-group>
+        <p v-else-if="searched && results.length === 0" class="text-center text-gray-600 mt-8">
+          No results found. Try another search term.
+        </p>
       </div>
     </div>
   </div>
@@ -64,12 +76,14 @@ import { gsap } from 'gsap'
 import SearchResult from '@/components/SearchResult.vue'
 
 const searchStore = useSearchStore()
-const { results } = storeToRefs(searchStore)
+const { results, lastSearches } = storeToRefs(searchStore)
 
 const loading = false
 
 const query = ref('')
+const searched = ref(false)
 const search = () => {
+  searched.value = true
   searchStore.search(query.value)
 }
 

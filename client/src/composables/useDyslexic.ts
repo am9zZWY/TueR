@@ -1,12 +1,12 @@
 import { ref } from 'vue'
-import { useConfigStore } from '@/stores/config'
+import { useLocal } from '@/stores/local'
 
 export default function useDyslexic() {
   const isDyslexic = ref(false) // Check if the user prefers dyslexic font
   const defaultFont = ref(document.body.style.fontFamily) // Get current font
   const dyslexicFont = 'Comic Sans MS' // Dyslexic-friendly font
 
-  const configStore = useConfigStore()
+  const configStore = useLocal()
   isDyslexic.value = configStore.getConfig('dyslexicFont')
 
   const toggleDyslexicFont = () => {

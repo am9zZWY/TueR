@@ -1,7 +1,8 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import { ENGINE_ENDPOINT } from '@/configuration'
-import type { SearchResult } from '@/types'
+import type { ApiSearchResultsResponse, SearchResult } from '@/types'
+import { useLocal } from '@/stores/local'
 
 const dummyResults: SearchResult[] = [
   {
@@ -21,6 +22,8 @@ const dummyResults: SearchResult[] = [
 ]
 
 export const useSearchStore = defineStore('search', () => {
+  const localStore = useLocal()
+
   const internalResults = ref<SearchResult[]>([])
   const results = computed(() => {
     const results = internalResults.value
@@ -28,17 +31,26 @@ export const useSearchStore = defineStore('search', () => {
     results.sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
     return results
   })
+  const lastSearches = ref<string[]>(localStore.getConfig('lastSearches') ?? [])
 
   function search(query: string) {
+    if (query === '') {
+      internalResults.value = dummyResults
+      return
+    }
+
     fetch(`${ENGINE_ENDPOINT}/search?query=${query}`)
       .then((response) => response.json())
-      .then((data) => {
-        internalResults.value = data
+      .then((data: ApiSearchResultsResponse) => {
+        internalResults.value = data.results
+        lastSearches.value.push(query)
+        localStore.setConfig('lastSearches', lastSearches.value)
       })
   }
 
   return {
     results,
+    lastSearches,
     search
   }
 })
