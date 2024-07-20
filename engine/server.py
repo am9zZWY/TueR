@@ -23,7 +23,7 @@ def start_server(debug=False):
 
 @app.route("/")
 def hello_world():
-    return jsonify({"message": "Hello from TüR!"})
+    return jsonify({"message": "Hello from the server!"})
 
 
 @app.route("/search")
@@ -31,8 +31,13 @@ def hello_world():
 def search():
     query = request.args.get('query', '')
 
-    # Return dummy results
-    """
+    result = {
+        "query": query,
+        "spellchecked_query": query,
+        "results": [],
+    }
+
+    # Return test double results
     results = [
         {
             "id": page_id,
@@ -42,12 +47,13 @@ def search():
             "summary": "Summary " + str(page_id),
             "score": 0.5
         } for page_id in range(100)]
-    return jsonify(results)
-    """
+    result["results"] = results
 
     # Rank documents according to query
-    ranking = rank(query)
-    return jsonify(ranking)
+    # ranking = rank(query)
+    # result["results"] = ranking
+
+    return jsonify(result)
 
 
 @app.route("/preview")
@@ -67,17 +73,24 @@ async def preview():
     return Response(str(soup), mimetype='text/html')
 
 
-@app.route("/summarize/<int:page_id>")
-def summarize(page_id):
+@app.route("/summarize/<int:doc_id>")
+def summarize(doc_id):
+    result = {
+        "doc_id": doc_id,
+        "summary": ""
+    }
+
     # Get the document by ID
-    doc = get_page_by_id(page_id)
+    doc = get_page_by_id(doc_id)
     if doc.empty:
         return Response("Document not found", status=404)
 
     # Get the text from the document
     text = doc['text'].values[0]
     summarized_text = get_summary_model().summarize(text)
-    return jsonify({"summary": summarized_text})
+    result["summary"] = summarized_text
+
+    return jsonify(result)
 
 
 @app.route("/site-map")
