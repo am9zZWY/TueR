@@ -16,11 +16,16 @@
           </a>
         </div>
       </div>
-      <p class="text-gray-600 mt-3">{{ result.description }}</p>
+      <p class="text-gray-600 mt-3 leading-relaxed truncate max-h-24 overflow-hidden"
+         v-if="result.description">
+        {{ result.description.length > 100 ? result.description.slice(0, 100) + '...' : result.description }}</p>
       <div class="mt-4 flex flex-wrap gap-2">
         <span v-for="tag in result.tags" :key="tag"
               class="px-3 py-1 bg-primary-100 text-primary-600 rounded-full text-xs font-medium">
           {{ tag }}
+        </span>
+        <span class="px-3 py-1 bg-primary-100 text-primary-600 rounded-full text-xs font-medium" v-if="result.score">
+          {{ Math.round((result.score ?? 0) * 100) / 100 }}%
         </span>
       </div>
       <div class="mt-4">

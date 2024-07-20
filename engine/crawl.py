@@ -48,7 +48,7 @@ SEEDS = [
 LANG_DETECTOR = LanguageDetector()
 # Ignore errors
 SILENT_ERRORS = False
-SILENT_WARNINGS = False
+SILENT_WARNINGS = True
 
 
 def log_error(error_msg):
@@ -93,6 +93,7 @@ class Crawler(PipelineElement):
         self.retry_delay = 1  # Delay between retries in seconds
         self.max_size = 1000  # Maximum number of pages to crawl
         self.max_concurrent = 10  # Maximum number of concurrent requests
+        self.max_same_domain_concurrent = 5  # Maximum number of concurrent requests to the same domain
         self.rate_limit = 10  # Rate limit in seconds
         self.ignore_domains = ["github.com", "linkedin.com", "xing.com", "instagram.com", "twitter.com", "youtube.com",
                                "de.wikipedia.org", "wikipedia.org", "google.com", "google.de", "google.co.uk",
@@ -121,6 +122,7 @@ class Crawler(PipelineElement):
 
         # Crawler state
         self.currently_crawled = set()
+        self.currently_crawled_base_urls = list()
         self.urls_crawled = set()
         self.ignore_links = set()
         self.to_crawl_queue = collections.deque(SEEDS)
@@ -160,7 +162,11 @@ class Crawler(PipelineElement):
             while not self.is_shutdown() and len(self.urls_crawled) < self.max_size:
                 while len(tasks) < self.max_concurrent and self.to_crawl_queue:
                     url = self.to_crawl_queue.popleft()
-                    if url not in self.ignore_links and url not in self.urls_crawled:
+                    if self.currently_crawled_base_urls.count(get_base_url(url)) >= self.max_same_domain_concurrent or \
+                            url in self.currently_crawled or url in self.ignore_links or url in self.urls_crawled:
+                        # Re-add to the queue
+                        self.to_crawl_queue.append(url)
+                    elif url not in self.ignore_links and url not in self.urls_crawled:
                         task = asyncio.create_task(self._process_url_with_semaphore(session, url))
                         tasks.add(task)
 
@@ -208,6 +214,13 @@ class Crawler(PipelineElement):
 
         Returns: None
         """
+        base_url = get_base_url(url)
+
+        if self.currently_crawled_base_urls.count(base_url) >= self.max_same_domain_concurrent:
+            log_warning(
+                f"Ignoring {url} because the base URL is already being crawled {self.max_same_domain_concurrent} times")
+            return
+
         if url in self.currently_crawled:
             log_warning(f"Ignoring {url} because it is already being crawled")
             return
@@ -235,10 +248,13 @@ class Crawler(PipelineElement):
             return
 
         self.currently_crawled.add(url)
+        self.currently_crawled_base_urls.append(base_url)
         html_content = await self._fetch(session, url)
         if html_content is None:
-            log_warning(f"Error fetching {url}")
+            log_warning(f"Received empty content from {url}")
             self.ignore_links.add(url)
+            self.currently_crawled.remove(url)
+            self.currently_crawled_base_urls.remove(base_url)
             return
 
         try:
@@ -247,11 +263,15 @@ class Crawler(PipelineElement):
         except Exception as e:
             log_error(f"Error parsing {url}: {e}")
             self.ignore_links.add(url)
+            self.currently_crawled.remove(url)
+            self.currently_crawled_base_urls.remove(base_url)
             return
 
         if not text or not soup:
             log_warning(f"Ignoring {url} because it is empty")
             self.ignore_links.add(url)
+            self.currently_crawled.remove(url)
+            self.currently_crawled_base_urls.remove(base_url)
             return
 
         check_html_tag_lang = soup.find("html").get("lang") in self.langs
@@ -262,11 +282,15 @@ class Crawler(PipelineElement):
         if not check_html_tag_lang and not check_xml_tag_lang and not check_link_lang and not check_text_lang:
             log_warning(f"Ignoring {url} because it is not in the correct language")
             self.ignore_links.add(url)
+            self.currently_crawled.remove(url)
+            self.currently_crawled_base_urls.remove(base_url)
             return
 
         if not any(keyword in text for keyword in self.required_keywords):
             log_warning(f"Ignoring {url} because it does not contain the required keywords")
             self.ignore_links.add(url)
+            self.currently_crawled.remove(url)
+            self.currently_crawled_base_urls.remove(base_url)
             return
 
         # Handle links
@@ -278,6 +302,7 @@ class Crawler(PipelineElement):
         print(f"Finished crawling {url}. Total: {len(self.urls_crawled)} links.")
         # Remove from currently crawled
         self.currently_crawled.remove(url)
+        self.currently_crawled_base_urls.remove(base_url)
         if not self.is_shutdown():
             await self.propagate_to_next(soup, url)
 
@@ -298,7 +323,8 @@ class Crawler(PipelineElement):
         for attempt in range(max_retries):
             print(f"Fetching {url} (attempt {attempt + 1}/{max_retries})" if attempt > 0 else f"Fetching {url}")
             try:
-                async with session.get(url, timeout=self._timeout, headers=self.headers) as response:
+                async with session.get(url, timeout=self._timeout, headers=self.headers, allow_redirects=True) as \
+                        response:
                     response.raise_for_status()
                     return await response.text()
             except (TimeoutError, ClientError) as e:
@@ -306,10 +332,10 @@ class Crawler(PipelineElement):
                     log_error(f"Failed to process {url} after {max_retries} attempts: {str(e)}")
                     return
                 # Exponential wait time
+                log_warning(f"Retrying {url} in {retry_delay * (2 ** attempt)} seconds")
                 await asyncio.sleep(retry_delay * (2 ** attempt))
             except Exception as e:
-                log_error(f"Error fetching {url}: {e}")
-            return None
+                log_error(f"Error fetching {url}: {response.status} {str(e)}")
 
     async def _handle_links(self, soup: BeautifulSoup, url: str):
         """

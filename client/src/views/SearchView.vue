@@ -49,9 +49,6 @@
           tag="ul"
           class="space-y-6"
           :css="false"
-          @before-enter="onBeforeEnter"
-          @enter="onEnter"
-          @leave="onLeave"
         >
           <li v-for="result in results" :key="result.id"
               class="bg-white rounded-lg border border-gray-200 shadow-sm transition-all duration-300 hover:shadow-md overflow-hidden">
