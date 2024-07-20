@@ -239,7 +239,7 @@ class Tokenizer(PipelineElement):
             """)
 
             self.cursor.execute("""
-                INSERT INTO Inverted_Index(word, doc, amount)
+                INSERT INTO TFs(word, doc, tf)
                 SELECT w.id, t.doc_id, COUNT(*)
                 FROM   tokens AS t, words AS w
                 WHERE  t.token = w.word
