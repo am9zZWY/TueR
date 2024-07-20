@@ -112,7 +112,7 @@ async def pipeline(from_crawl: bool = False):
     con.execute("TRUNCATE IDFs")
     con.execute("""
         INSERT INTO IDFs(word, idf)
-        SELECT word, LOG(N::double / COUNT(doc))
+        SELECT word, LOG(N::double / COUNT(DISTINCT doc))
         FROM   TFs, (SELECT COUNT(*) FROM documents) AS _(N)
         GROUP BY word, N
     """)
