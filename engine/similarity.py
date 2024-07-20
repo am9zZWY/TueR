@@ -22,6 +22,5 @@ def most_similar(word, topn=7)-> list:
     except Exception:
         return []
 
-# Example query
 
-print(most_similar("tiger"))
+

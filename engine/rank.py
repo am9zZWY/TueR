@@ -88,6 +88,12 @@ def bm25(query: str, k1=1.5, b=0.75):
     # Create the query vector
     
     query, expanded_query = process_and_expand_query(query)
+
+    # add strings from expanded_query to query
+    print(f"expanded_query: {expanded_query}")
+    db_query = set(query + [word for sim_list in expanded_query.values() for word, score in sim_list if score > 0.7])
+    print(f"db_query: {db_query}")
+    print(f"Query: {query}")
     # Calculate the BM25 scores
     scores = []
     L = len(tokens)  # TODO: Average document length
@@ -145,5 +151,5 @@ def rank(query):
     return bm25(query)
 
 
-res = rank("Tübingen publications")
+res = rank("food an drink")
 print(res[:10])
