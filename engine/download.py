@@ -2,6 +2,7 @@ import lzma
 import pickle
 
 import duckdb
+import pandas as pd
 from bs4 import BeautifulSoup
 
 from pipeline import PipelineElement
@@ -54,3 +55,5 @@ class Loader(PipelineElement):
             await self.propagate_to_next(soup, link, doc_id = doc_id)
 
             row = self.cursor.fetchone()
+
+        self.cursor.execute("TRUNCATE crawled")

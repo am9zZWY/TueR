@@ -1,6 +1,6 @@
 #!.venv/bin/python
 # -*- coding: utf-8 -*-
-
+import os
 import sys
 # Parse the command line arguments
 import argparse
@@ -31,14 +31,15 @@ nest_asyncio.apply()
 
 # Database setup
 con = duckdb.connect("crawlies.db")
-with open('setup.sql', 'r') as statements:
-    # Execute each statement
-    for statement in statements.read().split(';'):
-        if statement.strip():  # Skip empty statements
-            con.execute(statement)
+if not os.path.isfile('crawler_states/global.json'):
+    with open('setup.sql', 'r') as statements:
+        # Execute each statement
+        for statement in statements.read().split(';'):
+            if statement.strip():  # Skip empty statements
+                con.execute(statement)
 
-con.install_extension("fts")
-con.load_extension("fts")
+        con.install_extension("fts")
+        con.load_extension("fts")
 
 
 async def pipeline(online: bool = True):
@@ -106,32 +107,15 @@ async def pipeline(online: bool = True):
             save_pages()
             index_df = access_index()
             index_df.to_csv("inverted_index.csv")
-            con.close()
             print("State saved")
 
     # Compute TF-IDF matrix
+    con.execute("TRUNCATE IDFs")
     con.execute("""
-        WITH 
-        DocumentCount(total_docs) AS (
-            SELECT COUNT(*) FROM documents
-        ),
-        TermFrequence AS Inverted_Index,
-        DocumentFrequency(word, doc_count) AS (
-            SELECT word, COUNT(DISTINCT doc) AS doc_count
-            FROM   Inverted_Index
-        ),
-        TFIDF(doc, word, tfidf) AS (
-            SELECT tf.doc, tf.word,
-                   tf.amount * LOG((total_docs * 1.0) / df.doc_count)
-            FROM   TermFrequency AS tf,
-                   DocumentCount AS _(total_docs),
-                   DocumentFrequency AS df
-            WHERE  tf.word = df.word
-        )
-        INSERT INTO TFIDFs (doc, word, tfidf)
-            SELECT doc, word, tfidf
-            FROM   TFIDF
-            WHERE  tfidf > 0
+        INSERT INTO IDFs(word, idf)
+        SELECT word, LOG(N::double / COUNT(DISTINCT doc))
+        FROM   TFs, (SELECT COUNT(*) FROM documents) AS _(N)
+        GROUP BY word, N
     """)
 
     # Save the state+
