@@ -12,15 +12,16 @@ import signal
 # Database
 import duckdb
 # Pipeline
-from crawl import Crawler
 from custom_db import index_pages, access_index, save_pages
-from custom_rank import rank_from_file
+from crawl import Crawler
 from download import Downloader, Loader
 from summarize import Summarizer
 from tokenizer import Tokenizer
 from index import Indexer
 # Server
 from server import start_server
+# Rank
+from rank import rank_from_file
 
 # Threading
 MAX_THREADS = 10
