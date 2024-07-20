@@ -32,10 +32,10 @@ def bm25(query: str, dbcon: duckdb.DuckDBPyConnection, k1=1.5, b=0.75, debug: bo
 
     # Query TF and IDf for desired search terms
     df_tf = con.execute("""
-        SELECT t.doc, w.word, t.amount
+        SELECT t.doc, w.word, t.tf
         FROM   tfs AS t, words AS w, df_search AS _(token)
         WHERE  w.word = token AND w.id = t.word;
-    """).df().set_index(['doc', 'word'])['amount']
+    """).df().set_index(['doc', 'word'])['tf']
 
     df_idf = con.execute("""
         SELECT w.word, i.idf
