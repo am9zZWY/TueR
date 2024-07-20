@@ -93,8 +93,41 @@ def bm25(query: str, dbcon: duckdb.DuckDBPyConnection, k1=1.5, b=0.75, debug: bo
 
 
 def rank(query: str, debug: bool = False):
+    """
+    Rank the documents according to the query.
+    Args:
+        query:
+        debug:
+
+    Returns:
+
+    """
     con = duckdb.connect('crawlies.db')
     return bm25(query, con, debug=debug)
+
+
+def rank_from_file(filepath: str) -> list[list]:
+    """
+    Rank queries from a file.
+    Args:
+        filepath:
+
+    Returns:
+
+    """
+    queries = []
+    with open(filepath, "r") as file:
+        content = file.read()
+
+        for line in content.splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            number, item = line.split(maxsplit=1)
+            queries.append(item)
+
+    # Return the ranked queries
+    return [rank(query) for query in queries]
 
 
 if __name__ == '__main__':
