@@ -43,17 +43,21 @@ class Loader(PipelineElement):
         """
 
         self.cursor.execute("""
-            SELECT id, link, blob FROM crawled
+            SELECT link, blob FROM crawled
         """)
+
+        self.cursor.execute("TRUNCATE documents")
+        self.cursor.execute("TRUNCATE words")
+        self.cursor.execute("TRUNCATE TFs")
+        self.cursor.execute("TRUNCATE IDFs")
 
         row = self.cursor.fetchone()
         while row:
-            doc_id, link, blob = row
+            link, blob = row
 
             soup = pickle.loads(lzma.decompress(blob))
 
-            await self.propagate_to_next(soup, link, doc_id = doc_id)
+            await self.propagate_to_next(soup, link)
 
             row = self.cursor.fetchone()
 
-        self.cursor.execute("TRUNCATE crawled")

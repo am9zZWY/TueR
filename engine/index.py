@@ -14,12 +14,10 @@ class Indexer(PipelineElement):
 
         self.cursor = dbcon.cursor()
 
-        # self._load_state()
-
     def __del__(self):
         self.cursor.close()
 
-    async def process(self, data, link, doc_id=None):
+    async def process(self, data, link):
         """
         Indexes the input data.
         """
@@ -39,26 +37,14 @@ class Indexer(PipelineElement):
         description = soup.find("meta", attrs={"name": "description"})
         description_content = description.get("content") if description is not None else ""
 
-        if doc_id:
-            self.cursor.execute("""
-                INSERT INTO documents(id, link, title, description)
-                VALUES (?, ?, ?, ?)
-            """, [doc_id, link, title_content, description_content])
-        else:
-            self.cursor.execute("""
-                INSERT INTO documents(link, title, description)
-                VALUES (?, ?, ?)
-            """, [link, title_content, description_content])
+        self.cursor.execute("""
+            INSERT INTO documents(link, title, description)
+            VALUES (?, ?, ?)
+        """, [link, title_content, description_content])
 
-            doc_id = self.cursor.execute("SELECT id FROM documents WHERE link = ?", [link]).fetchone()[0]
+        doc_id = self.cursor.execute("""
+            SELECT id FROM documents WHERE link = ?
+        """, [link]).fetchone()[0]
 
         if not self.is_shutdown():
             await self.propagate_to_next(soup, doc_id, link)
-
-    def _load_state(self):
-        """
-        Load the state of the indexer.
-        """
-
-        # TODO: Not ideal! This should be in a database
-        load_pages()
