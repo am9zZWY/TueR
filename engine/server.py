@@ -2,6 +2,9 @@ import flask
 from flask import Flask, jsonify, request, Response
 from flask_cors import CORS, cross_origin
 
+<<<<<<< HEAD
+from rank import rank
+=======
 from custom_db import get_page_by_id
 from preview import load_preview
 from rank import rank
@@ -9,6 +12,7 @@ from summarize import get_summary_model
 
 # Disable the default flask server banner
 flask.cli.show_server_banner = lambda *args: None
+>>>>>>> master
 
 PORT = 8000
 
