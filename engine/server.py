@@ -1,7 +1,7 @@
 from flask import Flask, jsonify, request
 from flask_cors import CORS, cross_origin
 
-from custom_rank import rank
+from rank import rank
 
 PORT = 8000
 DEBUG = True
