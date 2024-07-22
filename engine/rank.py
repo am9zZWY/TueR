@@ -7,6 +7,9 @@ from nltk.stem import WordNetLemmatizer
 import nltk
 import spacy
 
+# Download the NLTK data
+print("Downloading NLTK data...")
+nltk.download('wordnet')
 
 nlp = spacy.load("en_core_web_sm", disable=["tok2vec", "parser", "senter"])
 

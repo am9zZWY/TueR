@@ -5,13 +5,8 @@ import pandas as pd
 import spacy
 from unidecode import unidecode
 
-import math
 from pipeline import PipelineElement
 
-from similarity import most_similar
-
-from nltk.stem import WordNetLemmatizer
-import nltk
 
 """
 IMPORTANT:
@@ -23,9 +18,7 @@ python -m spacy download en_core_web_sm
 print("Loading spaCy model...")
 nlp = spacy.load("en_core_web_sm", disable=["tok2vec", "parser", "senter"])
 
-# Download the NLTK data
-print("Downloading NLTK data...")
-nltk.download('wordnet')
+
 
 
 # Define regular expressions for preprocessing
