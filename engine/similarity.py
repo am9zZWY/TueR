@@ -12,7 +12,7 @@ def most_similar(word: str, topn=7)-> list:
         topn (int, optional): Amount of similiar words we want to have. Defaults to 7.
 
     Returns:
-        list: A list containing tuples of the most similar words and their similarity score.
+        list: A list of tuples containing the most similar words and their similarity score.
     """
 
     global model

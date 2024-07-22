@@ -351,8 +351,7 @@ test_sentences = [
 if __name__ == "__main__":
     for sentence in test_sentences:
          print(f"Original: {sentence}")
-         print(f"Tokenized: {process_text(sentence)}")
-         print()
+         print(f"Tokenized: {process_text(sentence)} \n")
+         
 
-    #dummy_query = "and the finally the what the I am the only tiger in the house"
-    #print(process_and_expand_query(dummy_query))
+
