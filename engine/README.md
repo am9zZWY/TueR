@@ -82,3 +82,6 @@ You can see a list of all available routes by navigating to <http://localhost:80
 The pipeline will not stop by itself, even if reached the maximum sites.
 You will have to stop it manually by pressing `Ctrl + C` in the terminal.
 But it will be able to resume from where it left off when you restart it.
+
+When the offline pipeline runs, it will try to finish completely before stopping.
+If you force stop it, the pipeline will not save the state because it's saved in `crawlies.db.wal`.
