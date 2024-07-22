@@ -77,7 +77,7 @@ async def pipeline(online: bool = True):
     crawler.add_next(indexer)
 
     loader.add_next(indexer)
-    
+
     indexer.add_next(tokenizer)
 
     def signal_handler(signum, frame):
@@ -118,15 +118,6 @@ async def pipeline(online: bool = True):
         GROUP BY word, N
     """)
     con.close()
-
-    # Save the state+
-    for stage in [crawler, indexer, tokenizer]:
-        await stage.shutdown()
-    index_pages()
-    save_pages()
-    index_df = access_index()
-    index_df.to_csv("inverted_index.csv")
-    print("State saved")
 
 
 def main():
