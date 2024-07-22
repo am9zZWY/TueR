@@ -45,6 +45,7 @@ class Loader(PipelineElement):
             SELECT link, content FROM crawled
         """)
         self.pages = self.cursor.fetchall()
+        self.cursor.close()
 
     def __del__(self):
         if hasattr(self, 'cursor'):

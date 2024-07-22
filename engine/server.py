@@ -80,36 +80,29 @@ async def preview():
     return Response(str(soup), mimetype='text/html')
 
 
-@app.route("/summarize/<int:doc_id>")
+@app.route("/summary/<int:doc_id>")
 def summarize(doc_id):
     result = {
         "doc_id": doc_id,
+        "url": "",
         "summary": ""
     }
 
     con = dbcon.cursor()
-    blob = con.execute("""
-        SELECT c.content
+    blob, link = con.execute("""
+        SELECT c.content, d.link
         FROM   documents AS d, crawled AS c
         WHERE  d.id = ?
            AND d.link = c.link
-    """, [doc_id]).fetchall()[0][0]
+    """, [doc_id]).fetchall()[0]
     con.close()
 
+    # Decompress the blob and get the summary
     soup = pickle.loads(lzma.decompress(blob))
-    main_content = soup.find("main") or soup.find("article") \
-                   or soup.find("section") or soup.find("body")
-
-    if main_content is None:
-        print(f"Warning: No main content found for {doc_id}. Using entire body.")
-        main_content = soup
-
-    text = main_content.get_text()
-
-    # Summarize the text
-    summarized_text = get_summary_model().summarize(text)
+    summarized_text = get_summary_model().summarize_soup(soup, max_words=20)
 
     result["summary"] = summarized_text
+    result["url"] = link
 
     return jsonify(result)
 
@@ -128,4 +121,3 @@ if __name__ == "__main__":
     dbcon = duckdb.connect("crawlies.db")
     start_server(con=dbcon)
     dbcon.close()
-

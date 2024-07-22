@@ -1,4 +1,13 @@
-summary = None # Global accessor for summary model
+from eld import LanguageDetector
+from transformers import pipeline
+from bs4 import BeautifulSoup
+
+from tokenizer import remove_unicode
+
+# Language detector
+LANG_DETECTOR = LanguageDetector()
+
+summary = None  # Global accessor for summary model
 
 
 class Summary:
@@ -10,17 +19,42 @@ class Summary:
         print(f"Loading summarization model {summary_model}... This may take a few minutes.")
         self.summarizer_pipeline = pipeline("summarization", model=summary_model, tokenizer=summary_model)
 
-    def summarize_text(self, text: str, max_words: int = 15) -> str:
-        # Summarize the text
+    def summarize_text(self, text: str, max_words: int = 20) -> str:
+        if not text:
+            return "No text provided for summarization."
+
         summarized_text = self.summarizer_pipeline(
-            text, max_length=max_words * 2, min_length=max_words, do_sample=False)[0]['summary_text']
+            text,
+            max_length=max_words * 2,
+            min_length=max_words,
+            do_sample=False
+        )[0]['summary_text']
 
-        # Truncate to the specified number of words
         words = summarized_text.split()
-        if len(words) > max_words:
-            summarized_text = ' '.join(words[:max_words]) + '...'
+        return ' '.join(words[:max_words]) + ('...' if len(words) > max_words else '')
 
-        return summarized_text
+    def summarize_soup(self, soup: BeautifulSoup, max_words: int = 20) -> str:
+        if not isinstance(soup, BeautifulSoup):
+            return "Invalid input: Expected a BeautifulSoup object."
+
+        main_content = soup.find("body")
+        meta_description = soup.find("meta", attrs={"name": "description"})
+
+        text = ""
+        if main_content:
+            text = main_content.get_text(strip=True)
+        elif meta_description and 'content' in meta_description.attrs:
+            text = meta_description['content']
+
+        text = text[:512]  # Limit to 512 characters
+
+        if len(text) < 40:
+            return "Insufficient content for summarization."
+
+        text = remove_unicode(text)
+
+        print(f"Summarizing text: {text[:100]}... (length: {len(text)})")
+        return self.summarize_text(text, max_words)
 
 
 def get_summary_model() -> Summary:

@@ -7,7 +7,6 @@ from unidecode import unidecode
 
 from pipeline import PipelineElement
 
-
 """
 IMPORTANT:
 Make sure you install the spaCy model with:
@@ -17,8 +16,6 @@ python -m spacy download en_core_web_sm
 # Load the spaCy model
 print("Loading spaCy model...")
 nlp = spacy.load("en_core_web_sm", disable=["tok2vec", "parser", "senter"])
-
-
 
 
 # Define regular expressions for preprocessing
@@ -173,7 +170,6 @@ def preprocess_text(text: str) -> str:
     return text
 
 
-
 def process_text(text: str) -> list[str] | list[tuple]:
     """Process text using spaCy and custom logic."""
 
@@ -251,7 +247,7 @@ class Tokenizer(PipelineElement):
         alt_texts = [clean_text(img.get("alt", "")) for img in img_tags if img.get("alt")]
 
         # Combine all text
-        all_text = extracted_text + [description_content, title_content] + alt_texts
+        all_text: list[str] = extracted_text + [description_content, title_content] + alt_texts
         text = " ".join(all_text).strip()
 
         # Tokenize the text
