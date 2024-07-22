@@ -80,7 +80,7 @@ async def pipeline(online: bool = True):
 
     # Configure the pipeline structure
     crawler.add_next(downloader)
-    # crawler.add_next(indexer)
+    crawler.add_next(indexer)
 
     loader.add_next(indexer)
 
