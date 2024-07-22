@@ -82,6 +82,7 @@ async def pipeline(online: bool = True):
     crawler.add_next(indexer)
 
     loader.add_next(indexer)
+    
     indexer.add_next(tokenizer)
 
     def signal_handler(signum, frame):
@@ -147,7 +148,7 @@ def main():
             asyncio.run(pipeline(online=False))
         elif args.server:
             # Start the server
-            start_server(debug=args.debug)
+            start_server(debug=args.debug, con=con)
         elif args.file:
             # Rank the queries from the file
             queries = rank_from_file(args.file)
