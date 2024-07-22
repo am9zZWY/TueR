@@ -15,7 +15,6 @@ import duckdb
 from custom_db import index_pages, access_index, save_pages
 from crawl import Crawler
 from download import Downloader, Loader
-from summarize import Summarizer
 from tokenizer import Tokenizer
 from index import Indexer
 # Server
@@ -78,6 +77,7 @@ async def pipeline(online: bool = True):
     crawler.add_next(indexer)
 
     loader.add_next(indexer)
+    
     indexer.add_next(tokenizer)
 
     def signal_handler(signum, frame):
@@ -117,6 +117,7 @@ async def pipeline(online: bool = True):
         FROM   TFs, (SELECT COUNT(*) FROM documents) AS _(N)
         GROUP BY word, N
     """)
+    con.close()
 
     # Save the state+
     for stage in [crawler, indexer, tokenizer]:
@@ -125,7 +126,6 @@ async def pipeline(online: bool = True):
     save_pages()
     index_df = access_index()
     index_df.to_csv("inverted_index.csv")
-    con.close()
     print("State saved")
 
 
