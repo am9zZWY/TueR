@@ -21,5 +21,5 @@ async def load_preview(url: str) -> BeautifulSoup:
         async with session.get(url) as response:
             html_content = await response.text()
 
-    soup = BeautifulSoup(html_content, 'html.parser')
+    soup = BeautifulSoup(html_content, "html.parser")
     return soup

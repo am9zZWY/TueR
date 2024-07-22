@@ -27,7 +27,8 @@ class Downloader(PipelineElement):
 
         self.cursor.execute(
             """INSERT INTO crawled(link, content) VALUES (?, ?)""",
-            [link, lzma.compress(pickle.dumps(data))])
+            [link, lzma.compress(pickle.dumps(data))],
+        )
 
 
 class Loader(PipelineElement):
@@ -41,14 +42,16 @@ class Loader(PipelineElement):
         self.cursor.execute("TRUNCATE documents")
 
         # Get pages from the database
-        self.cursor.execute("""
+        self.cursor.execute(
+            """
             SELECT link, content FROM crawled
-        """)
+        """
+        )
         self.pages = self.cursor.fetchall()
         self.cursor.close()
 
     def __del__(self):
-        if hasattr(self, 'cursor'):
+        if hasattr(self, "cursor"):
             self.cursor.close()
 
     async def process(self):

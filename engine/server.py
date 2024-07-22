@@ -36,7 +36,7 @@ def hello_world():
 @app.route("/search")
 @cross_origin()
 def search():
-    query = request.args.get('query', '')
+    query = request.args.get("query", "")
 
     result = {
         "query": query,
@@ -52,8 +52,10 @@ def search():
             "url": "https://www.uni-tuebingen.de",
             "description": "Description " + str(page_id),
             "summary": "Summary " + str(page_id),
-            "score": 0.5
-        } for page_id in range(100)]
+            "score": 0.5,
+        }
+        for page_id in range(100)
+    ]
     result["results"] = results
 
     # Rank documents according to query
@@ -72,29 +74,28 @@ async def preview():
         A Response containing the full HTML content with inlined CSS and JavaScript
     """
 
-    url = request.args.get('url', '')
+    url = request.args.get("url", "")
     if not url:
         return Response("No URL provided", status=400)
 
     soup = await load_preview(url)
-    return Response(str(soup), mimetype='text/html')
+    return Response(str(soup), mimetype="text/html")
 
 
 @app.route("/summary/<int:doc_id>")
 def summarize(doc_id):
-    result = {
-        "doc_id": doc_id,
-        "url": "",
-        "summary": ""
-    }
+    result = {"doc_id": doc_id, "url": "", "summary": ""}
 
     con = dbcon.cursor()
-    blob, link = con.execute("""
+    blob, link = con.execute(
+        """
         SELECT c.content, d.link
         FROM   documents AS d, crawled AS c
         WHERE  d.id = ?
            AND d.link = c.link
-    """, [doc_id]).fetchall()[0]
+    """,
+        [doc_id],
+    ).fetchall()[0]
     con.close()
 
     # Decompress the blob and get the summary
