@@ -66,6 +66,17 @@ The server is built with Flask and runs on port 8000 by default. To start the se
 python server.py
 ```
 
+You can see a list of all available routes by navigating to <http://localhost:8000/site-map>.
+
+---
+
+**Important:**
+
+- The server will only work if you have crawled some pages before.
+- For the summarization you will need a strong CPU and a lot of RAM, as the summarization is done on the fly and can be
+  quite resource-intensive.
+---
+
 ## Known Issues
 
 The pipeline will not stop by itself, even if reached the maximum sites.
