@@ -1,6 +1,41 @@
 import duckdb
-from tokenizer import process_and_expand_query
 import pandas as pd
+from similarity import most_similar
+import math
+from tokenizer import preprocess_text
+from nltk.stem import WordNetLemmatizer
+import nltk
+import spacy
+
+
+nlp = spacy.load("en_core_web_sm", disable=["tok2vec", "parser", "senter"])
+
+def calc_num_similar_words(query_length: int, max_sim_words=7, decrease_rate=0.078) -> int:
+        num_sim_words = max_sim_words * math.exp(-decrease_rate * query_length)
+        return int(num_sim_words)
+
+def process_and_expand_query(query: str):
+    default_num_sim_words = 7
+    processed_query = preprocess_text(query)
+    doc = nlp(processed_query)
+    wnl = WordNetLemmatizer()
+    tokens = []
+
+    proccessed_sim_words = {}
+    for token in doc:
+        if token.is_stop or token.is_punct or token.is_space:
+            continue
+        token = token.lemma_ if token.pos_ in ["NOUN", "PROPN"] else token.text
+        tokens.append(token)
+    tokens_length = len(tokens)
+    if tokens_length > 7:
+        num_sim_words = calc_num_similar_words(tokens_length)
+    else:   
+        num_sim_words = default_num_sim_words
+    for token in tokens:
+            sim_words = most_similar(token, num_sim_words)
+            proccessed_sim_words[token] = list(map(lambda x: (wnl.lemmatize(x[0].lower()), x[1]), sim_words))    
+    return tokens, proccessed_sim_words
 
 
 def bm25(query: str, dbcon: duckdb.DuckDBPyConnection, k1=1.5, b=0.75, debug: bool = False) -> list[dict]:
