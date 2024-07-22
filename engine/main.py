@@ -2,23 +2,29 @@
 # -*- coding: utf-8 -*-
 import os
 import sys
+
 # Parse the command line arguments
 import argparse
+
 # Asynchronous programming
 from concurrent.futures import ThreadPoolExecutor
 import asyncio
 import nest_asyncio
 import signal
+
 # Database
 import duckdb
+
 # Pipeline
 from custom_db import index_pages, access_index, save_pages
 from crawl import Crawler
 from download import Downloader, Loader
 from tokenizer import Tokenizer
 from index import Indexer
+
 # Server
 from server import start_server
+
 # Rank
 from rank import rank_from_file
 
@@ -31,10 +37,10 @@ nest_asyncio.apply()
 
 # Database setup
 con = duckdb.connect("crawlies.db")
-if not os.path.isfile('crawler_states/global.json'):
-    with open('setup.sql', 'r') as statements:
+if not os.path.isfile("crawler_states/global.json"):
+    with open("setup.sql", "r") as statements:
         # Execute each statement
-        for statement in statements.read().split(';'):
+        for statement in statements.read().split(";"):
             if statement.strip():  # Skip empty statements
                 con.execute(statement)
 
@@ -81,7 +87,9 @@ async def pipeline(online: bool = True):
     indexer.add_next(tokenizer)
 
     def signal_handler(signum, frame):
-        print("Interrupt received, shutting down... Please wait. This may take a few seconds.")
+        print(
+            "Interrupt received, shutting down... Please wait. This may take a few seconds."
+        )
         global is_shutting_down
         if not is_shutting_down:
             is_shutting_down = True
@@ -111,23 +119,46 @@ async def pipeline(online: bool = True):
 
     # Compute TF-IDF matrix
     con.execute("TRUNCATE IDFs")
-    con.execute("""
+    con.execute(
+        """
         INSERT INTO IDFs(word, idf)
         SELECT word, LOG(N::double / COUNT(DISTINCT doc))
         FROM   TFs, (SELECT COUNT(*) FROM documents) AS _(N)
         GROUP BY word, N
-    """)
+    """
+    )
     con.close()
 
 
 def main():
     # Parse the command line arguments
     parser = argparse.ArgumentParser(description=f"Find anything with {ENGINE_NAME}!")
-    parser.add_argument("--online", help="Run pipeline from the web (online)", action="store_true", required=False)
-    parser.add_argument("--offline", help="Run pipeline from the disk (offline)", action="store_true", required=False)
-    parser.add_argument("-s", "--server", help="Run the server", action="store_true", required=False)
-    parser.add_argument("-f", "--file", help="Queries file", default="queries.txt", type=str, required=False)
-    parser.add_argument("-d", "--debug", help="Debug mode", action="store_true", required=False)
+    parser.add_argument(
+        "--online",
+        help="Run pipeline from the web (online)",
+        action="store_true",
+        required=False,
+    )
+    parser.add_argument(
+        "--offline",
+        help="Run pipeline from the disk (offline)",
+        action="store_true",
+        required=False,
+    )
+    parser.add_argument(
+        "-s", "--server", help="Run the server", action="store_true", required=False
+    )
+    parser.add_argument(
+        "-f",
+        "--file",
+        help="Queries file",
+        default="queries.txt",
+        type=str,
+        required=False,
+    )
+    parser.add_argument(
+        "-d", "--debug", help="Debug mode", action="store_true", required=False
+    )
 
     try:
         args = parser.parse_args()
