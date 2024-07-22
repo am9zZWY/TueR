@@ -7,10 +7,6 @@ from unidecode import unidecode
 
 from pipeline import PipelineElement
 
-from similarity import most_similar
-
-from nltk.stem import WordNetLemmatizer
-import nltk
 
 """
 IMPORTANT:
@@ -22,9 +18,7 @@ python -m spacy download en_core_web_sm
 print("Loading spaCy model...")
 nlp = spacy.load("en_core_web_sm", disable=["tok2vec", "parser", "senter"])
 
-# Download the NLTK data
-print("Downloading NLTK data...")
-nltk.download('wordnet')
+
 
 
 # Define regular expressions for preprocessing
@@ -178,28 +172,6 @@ def preprocess_text(text: str) -> str:
     text = remove_single_character_tokens(text)
     return text
 
-
-def process_and_expand_query(query: str):
-    processed_query = preprocess_text(query)
-    doc = nlp(processed_query)
-    wnl = WordNetLemmatizer()
-    # TODO Spell checking
-
-    tokens = []
-
-    proccessed_sim_words = {}
-    for token in doc:
-        if token.is_stop or token.is_punct or token.is_space:
-            continue
-        token = token.lemma_ if token.pos_ in ["NOUN", "PROPN"] else token.text
-        tokens.append(token)
-
-        # generate similiar words and lemmatize
-        #  TODO check if we need preprocessing aswell
-        sim_words = most_similar(token)
-        proccessed_sim_words[token] = list(map(lambda x: (wnl.lemmatize(x[0].lower()), x[1]), sim_words))
-
-    return tokens, proccessed_sim_words
 
 
 def process_text(text: str) -> list[str] | list[tuple]:

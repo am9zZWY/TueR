@@ -1,6 +1,62 @@
 import duckdb
-from tokenizer import process_and_expand_query
 import pandas as pd
+from similarity import most_similar
+import math
+from tokenizer import preprocess_text
+from nltk.stem import WordNetLemmatizer
+import nltk
+import spacy
+
+# Download the NLTK data
+print("Downloading NLTK data...")
+nltk.download('wordnet')
+
+nlp = spacy.load("en_core_web_sm", disable=["tok2vec", "parser", "senter"])
+
+def calc_num_similar_words(query_length: int, max_sim_words=7, decrease_rate=0.08) -> int:
+    """Exponential decay function to calculate the number of similar words to use based on the query length.
+
+    Args:
+        query_length (int): Query after preprocessing.
+        max_sim_words (int, optional): Max number of sim words we want to produce. Represents the baseline. Defaults to 7.
+        decrease_rate (float, optional): Rate we want our function to decrease. The bigger the number the higher the decrease. Defaults to 0.08.
+
+    Returns:
+        int: _description_
+    """
+    num_sim_words = max_sim_words * math.exp(-decrease_rate * query_length)
+    return int(num_sim_words)
+
+def process_and_expand_query(query: str)->tuple:
+    """Preprocess the query and expand it with similar words.
+
+    Args:
+        query (str): User query.
+
+    Returns:
+        tuple: Preprocessed query and expanded query with similar words and their similarity scores.
+    """
+    default_num_sim_words = 7
+    processed_query = preprocess_text(query)
+    doc = nlp(processed_query)
+    wnl = WordNetLemmatizer()
+    tokens = []
+
+    proccessed_sim_words = {}
+    for token in doc:
+        if token.is_stop or token.is_punct or token.is_space:
+            continue
+        token = token.lemma_ if token.pos_ in ["NOUN", "PROPN"] else token.text
+        tokens.append(token)
+    tokens_length = len(tokens)
+    if tokens_length > 7:
+        num_sim_words = calc_num_similar_words(tokens_length)
+    else:   
+        num_sim_words = default_num_sim_words
+    for token in tokens:
+            sim_words = most_similar(token, num_sim_words)
+            proccessed_sim_words[token] = list(map(lambda x: (wnl.lemmatize(x[0].lower()), x[1]), sim_words))    
+    return tokens, proccessed_sim_words
 
 
 def bm25(query: str, dbcon: duckdb.DuckDBPyConnection, k1=1.5, b=0.75, debug: bool = False) -> list[dict]:

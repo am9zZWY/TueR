@@ -2,23 +2,28 @@
 # -*- coding: utf-8 -*-
 import os
 import sys
+
 # Parse the command line arguments
 import argparse
+
 # Asynchronous programming
 from concurrent.futures import ThreadPoolExecutor
 import asyncio
 import nest_asyncio
 import signal
+
 # Database
 import duckdb
+
 # Pipeline
-from custom_db import index_pages, access_index, save_pages
 from crawl import Crawler
 from download import Downloader, Loader
 from tokenizer import Tokenizer
 from index import Indexer
+
 # Server
 from server import start_server
+
 # Rank
 from rank import rank_from_file
 
@@ -112,12 +117,14 @@ async def pipeline(online: bool = True):
 
     # Compute TF-IDF matrix
     con.execute("TRUNCATE IDFs")
-    con.execute("""
+    con.execute(
+        """
         INSERT INTO IDFs(word, idf)
         SELECT word, LOG(N::double / COUNT(DISTINCT doc))
         FROM   TFs, (SELECT COUNT(*) FROM documents) AS _(N)
         GROUP BY word, N
-    """)
+        """
+    )
     con.close()
 
 
