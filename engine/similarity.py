@@ -27,7 +27,7 @@ def most_similar(word: str, topn=7)-> list:
     try:
 
         most_sim = model.most_similar(word, topn=topn)
-        print(f"Most similar words to {word}: {most_sim}")
+        # print(f"Most similar words to {word}: {most_sim}")
         return most_sim
     except Exception:
         return []

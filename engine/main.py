@@ -144,14 +144,15 @@ def main():
             start_server(debug=args.debug, con=con)
         elif args.file:
             # Rank the queries from the file
-            queries = rank_from_file(args.file)
-            for i, query in enumerate(queries):
-                print(f"Query {i + 1}: {query}")
+            rank_from_file(args.file)
         else:
             parser.print_help()
 
     except argparse.ArgumentError as e:
-        print(f"An error occurred while parsing the command line arguments: {str(e)}", file=sys.stderr)
+        print(
+            f"An error occurred while parsing the command line arguments: {str(e)}",
+            file=sys.stderr,
+        )
     except Exception as e:
         print(f"An error occurred: {str(e)}", file=sys.stderr)
     finally:

@@ -126,10 +126,21 @@ def rank_from_file(filepath: str) -> list[list]:
             queries.append(item)
 
     # Return the ranked queries
-    return [rank(query) for query in queries]
+    print("Ranking queries ...")
+    rankings = [rank(query) for query in queries]
+
+    # Generate results.txt from rankings
+    print("Generating result.txt ...")
+    with open("result.txt", "w") as file:
+        for i, ranking in enumerate(rankings):
+            query_number = i + 1
+            for doc in ranking:
+                file.write(f'{query_number}\t{doc["id"]}\t{doc["url"]}\t{doc["score"]}\n')
+    print("result.txt generated.")
+    return rankings
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     res = rank("food an drink", debug=True)
     print(res[:10])
     res = rank("Tübingen publications", debug=True)
