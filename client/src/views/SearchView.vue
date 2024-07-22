@@ -80,8 +80,8 @@ const loading = false
 const query = ref('')
 const searched = ref(false)
 const search = () => {
-  searched.value = true
-  searchStore.search(query.value)
+  searched.value = false
+  searchStore.search(query.value)?.then(() => searched.value = true)
 }
 
 

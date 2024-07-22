@@ -39,7 +39,7 @@ export const useSearchStore = defineStore('search', () => {
       return
     }
 
-    fetch(`${ENGINE_ENDPOINT}/search?query=${query}`)
+    return fetch(`${ENGINE_ENDPOINT}/search?query=${query}`)
       .then((response) => response.json())
       .then((data: ApiSearchResultsResponse) => {
         internalResults.value = data.results
