@@ -2,24 +2,28 @@
 # -*- coding: utf-8 -*-
 import os
 import sys
+
 # Parse the command line arguments
 import argparse
+
 # Asynchronous programming
 from concurrent.futures import ThreadPoolExecutor
 import asyncio
 import nest_asyncio
 import signal
+
 # Database
 import duckdb
+
 # Pipeline
-from custom_db import index_pages, access_index, save_pages
 from crawl import Crawler
 from download import Downloader, Loader
-from summarize import Summarizer
 from tokenizer import Tokenizer
 from index import Indexer
+
 # Server
 from server import start_server
+
 # Rank
 from rank import rank_from_file
 
@@ -57,7 +61,6 @@ async def pipeline(online: bool = True):
     tokenizer = Tokenizer(con)
     downloader = Downloader(con)
     loader = Loader(con)
-    summarizer = Summarizer(con)
 
     # Add the pipeline elements
     # Crawler: Crawl the website
@@ -67,7 +70,6 @@ async def pipeline(online: bool = True):
 
     # Loader: Load the pages from the disk
     loader.add_next(indexer)
-    loader.add_next(summarizer)
 
     # Indexer: Index the pages
     indexer.add_next(tokenizer)
