@@ -167,6 +167,7 @@ class Crawler(PipelineElement):
                         # Re-add to the queue
                         self.to_crawl_queue.append(url)
                     elif url not in self.ignore_links and url not in self.urls_crawled:
+                        self.to_crawl_set.remove(url)
                         task = asyncio.create_task(self._process_url_with_semaphore(session, url))
                         tasks.add(task)
 
@@ -214,19 +215,19 @@ class Crawler(PipelineElement):
 
         Returns: None
         """
-        base_url = get_base_url(url)
-
-        if self.currently_crawled_base_urls.count(base_url) >= self.max_same_domain_concurrent:
-            log_warning(
-                f"Ignoring {url} because the base URL is already being crawled {self.max_same_domain_concurrent} times")
+        if len(self.urls_crawled) >= self.max_size:
+            log_warning("Maximum size reached")
             return
+
+        base_url = get_base_url(url)
 
         if url in self.currently_crawled:
             log_warning(f"Ignoring {url} because it is already being crawled")
             return
 
-        if len(self.urls_crawled) >= self.max_size:
-            log_warning("Maximum size reached")
+        if self.currently_crawled_base_urls.count(base_url) >= self.max_same_domain_concurrent:
+            log_warning(
+                f"Ignoring {url} because the base URL is already being crawled {self.max_same_domain_concurrent} times")
             return
 
         if not url.startswith("http"):
@@ -397,10 +398,13 @@ class Crawler(PipelineElement):
         if not os.path.exists("crawler_states"):
             os.makedirs("crawler_states")
 
+        to_crawl_queue_set = set(self.to_crawl_queue)
+        to_crawl_queue = [url for url in to_crawl_queue_set]
+
         with open(f"crawler_states/global.json", "w") as f:
             # Write it as json
             f.write(json.dumps({
-                "to_crawl": list(self.to_crawl_queue),
+                "to_crawl": to_crawl_queue,
                 "ignore_links": list(self.ignore_links),
                 "found_links": list(self.urls_crawled)
             }))
@@ -419,10 +423,12 @@ class Crawler(PipelineElement):
 
         with open(f"crawler_states/global.json", "r") as f:
             data = json.loads(f.read())
-            self.to_crawl_queue = collections.deque(data["to_crawl"])
             self.to_crawl_set = set(data["to_crawl"])
             self.ignore_links = set(data["ignore_links"])
             self.urls_crawled = set(data["found_links"])
+
+        # Reinitialize the queue
+        self.to_crawl_queue = collections.deque(self.to_crawl_set)
 
 
 # IMPORTANT: Please use main.py instead of this file

@@ -64,6 +64,7 @@ async def pipeline(online: bool = True):
     crawler = Crawler(con)
     crawler.max_size = 10000
     crawler.max_retries = 1
+    crawler.max_concurrent = 5
     indexer = Indexer(con)
     tokenizer = Tokenizer(con)
     downloader = Downloader(con)
@@ -74,7 +75,7 @@ async def pipeline(online: bool = True):
 
     # Configure the pipeline structure
     crawler.add_next(downloader)
-    crawler.add_next(indexer)
+    #crawler.add_next(indexer)
 
     loader.add_next(indexer)
 
