@@ -9,7 +9,7 @@ def most_similar(word: str, topn=7) -> list:
 
     Args:
         word (str): The word to find similar words to.
-        topn (int, optional): Amount of similiar words we want to have. Defaults to 7.
+        topn (int, optional): Number of similar words we want to have. Default to 7.
 
     Returns:
         list: A list of tuples containing the most similar words and their similarity score.
