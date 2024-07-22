@@ -24,15 +24,18 @@
               class="px-3 py-1 bg-primary-100 text-primary-600 rounded-full text-xs font-medium">
           {{ tag }}
         </span>
-        <span class="px-3 py-1 bg-primary-100 text-primary-600 rounded-full text-xs font-medium" v-if="result.score">
+        <!-- <span class="px-3 py-1 bg-primary-100 text-primary-600 rounded-full text-xs font-medium" v-if="result.score">
           {{ Math.round((result.score ?? 0) * 100) / 100 }}%
-        </span>
+        </span> -->
       </div>
       <div class="mt-4">
-        <button @click="toggleSummary"
+        <button @click="toggleSummary" :disabled="loadingSummary"
                 class="text-sm text-primary-600 hover:text-primary-700 font-medium focus:outline-none">
           {{ showSummary ? 'Hide' : 'Show' }} Summary
         </button>
+        <div v-if="loadingSummary"
+             class="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-primary-500 mx-2">
+        </div>
       </div>
       <transition
         enter-active-class="transition ease-out duration-200"
@@ -74,12 +77,9 @@ interface SearchResultProps {
 
 const { result } = defineProps<SearchResultProps>()
 
-const showSummary = ref(false)
-const summary = ref('')
 
 const showPreview = ref(false)
 const preview = ref('')
-
 const togglePreview = async () => {
   showPreview.value = !showPreview.value
   if (preview.value) {
@@ -90,14 +90,23 @@ const togglePreview = async () => {
   preview.value = URL.createObjectURL(await response.blob())
 }
 
+const loadingSummary = ref(false)
+const showSummary = ref(false)
+const summary = ref('')
 const toggleSummary = async () => {
+  loadingSummary.value = true
   showSummary.value = !showSummary.value
-  if (result.summary) {
+  if (summary.value) {
+    loadingSummary.value = false
     return
   }
 
-  const response = await fetch(`${ENGINE_ENDPOINT}/summary/${result.id}`)
-  summary.value = await response.text()
+  summary.value = await fetch(`${ENGINE_ENDPOINT}/summary/${result.id}`)
+    .then((res) => res.json())
+    .then((data) => {
+      loadingSummary.value = false
+      return data.summary
+    })
 }
 
 //watch(() => result.url, downloadPreview, { immediate: true })

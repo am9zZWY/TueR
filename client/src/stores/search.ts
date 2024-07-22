@@ -24,6 +24,7 @@ const dummyResults: SearchResult[] = [
 export const useSearchStore = defineStore('search', () => {
   const localStore = useLocal()
 
+  const lastQuery = ref('')
   const internalResults = ref<SearchResult[]>([])
   const results = computed(() => {
     const results = internalResults.value
@@ -35,9 +36,11 @@ export const useSearchStore = defineStore('search', () => {
 
   function search(query: string) {
     if (query === '') {
-      internalResults.value = dummyResults
+      internalResults.value = []
       return
     }
+
+    lastQuery.value = query
 
     return fetch(`${ENGINE_ENDPOINT}/search?query=${query}`)
       .then((response) => response.json())
@@ -51,6 +54,7 @@ export const useSearchStore = defineStore('search', () => {
   return {
     results,
     lastSearches,
+    lastQuery,
     search
   }
 })
