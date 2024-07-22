@@ -1,5 +1,4 @@
 from eld import LanguageDetector
-from transformers import pipeline
 from bs4 import BeautifulSoup
 
 from tokenizer import remove_unicode

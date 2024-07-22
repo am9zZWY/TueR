@@ -1,5 +1,3 @@
-import urllib
-
 from aiohttp import ClientSession
 from bs4 import BeautifulSoup
 

@@ -1,9 +1,7 @@
-import asyncio
 import lzma
 import pickle
 
 import duckdb
-import pandas as pd
 from bs4 import BeautifulSoup
 
 from pipeline import PipelineElement

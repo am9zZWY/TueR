@@ -310,7 +310,7 @@ class Tokenizer(PipelineElement):
                 """
                 INSERT INTO words(word)
                 SELECT DISTINCT token
-                FROM   tokens 
+                FROM   tokens
                     EXCEPT
                 SELECT word FROM words
             """

@@ -108,6 +108,21 @@ def summarize(doc_id):
     return jsonify(result)
 
 
+@app.route("/document-count")
+def doc_count():
+    con = dbcon.cursor()
+
+    doc_count = con.execute(
+        """
+        SELECT COUNT(*) FROM documents
+    """
+    ).fetchall()[0][0]
+
+    con.cursor()
+
+    return jsonify({"doc_count": doc_count})
+
+
 @app.route("/site-map")
 def site_map():
     links = []

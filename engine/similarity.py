@@ -1,6 +1,5 @@
 import gensim.downloader as api
 import gensim
-import time
 
 model = None
 
