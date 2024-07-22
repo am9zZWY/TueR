@@ -41,71 +41,73 @@ if not os.path.isfile('crawler_states/global.json'):
         con.install_extension("fts")
         con.load_extension("fts")
 
+# Shutdown event for the pipeline
+shutdown_event = asyncio.Event()
+is_shutting_down = False
+
+
+async def shutdown_pipeline(stages):
+    print("Initiating pipeline shutdown...")
+    shutdown_tasks = [stage.shutdown() for stage in stages]
+    await asyncio.gather(*shutdown_tasks)
+    print("Pipeline shutdown complete.")
+
 
 async def pipeline(online: bool = True):
     """
     Start the crawling, tokenizing, and indexing pipeline
-    Returns:
+    Returns: None
 
     """
 
     # Initialize the pipeline elements
     crawler = Crawler(con)
     crawler.max_size = 10000
+    crawler.max_retries = 1
     indexer = Indexer(con)
     tokenizer = Tokenizer(con)
     downloader = Downloader(con)
     loader = Loader(con)
-    # summarizer = Summarizer(con)
 
-    # Add the pipeline elements
-    # Crawler: Crawl the website
+    # Define the pipeline stages
+    stages = [crawler, indexer, tokenizer, downloader, loader]
+
+    # Configure the pipeline structure
     crawler.add_next(downloader)
     crawler.add_next(indexer)
 
-    # Loader: Load the pages from the disk
     loader.add_next(indexer)
-
-    # Indexer: Index the pages
+    
     indexer.add_next(tokenizer)
 
     def signal_handler(signum, frame):
         print("Interrupt received, shutting down... Please wait. This may take a few seconds.")
-        for element in [crawler, indexer, downloader, tokenizer, loader]:
-            element.shutdown()
+        global is_shutting_down
+        if not is_shutting_down:
+            is_shutting_down = True
+            asyncio.get_running_loop().call_soon_threadsafe(shutdown_event.set)
 
     signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
 
     # Initialize the pipeline
     with ThreadPoolExecutor(max_workers=MAX_THREADS) as executor:
         # Add the executor to the pipeline elements
-        crawler.add_executor(executor)
-        indexer.add_executor(executor)
-        tokenizer.add_executor(executor)
-        downloader.add_executor(executor)
-        loader.add_executor(executor)
+        for stage in stages:
+            stage.add_executor(executor)
 
         # Start the pipeline
-        if online:
-            asyncio.run(crawler.process())
-        else:
-            asyncio.run(loader.process())
+        start_element = crawler if online else loader
+        process_task = asyncio.create_task(start_element.process())
+
         try:
-            if online:
-                await crawler.process()
-            else:
-                await loader.process()
+            # Wait for the shutdown event
+            await shutdown_event.wait()
         except Exception as e:
             print(f"An error occurred: {e}")
         finally:
-            # Ensure states are saved even if an exception occurs
-            for element in [crawler, indexer, tokenizer]:
-                element.save_state()
-            index_pages()
-            save_pages()
-            index_df = access_index()
-            index_df.to_csv("inverted_index.csv")
-            print("State saved")
+            # Shutdown all elements
+            await shutdown_pipeline(stages)
 
     # Compute TF-IDF matrix
     con.execute("TRUNCATE IDFs")
@@ -118,8 +120,8 @@ async def pipeline(online: bool = True):
     con.close()
 
     # Save the state+
-    for element in [crawler, indexer, tokenizer]:
-        element.save_state()
+    for stage in [crawler, indexer, tokenizer]:
+        await stage.shutdown()
     index_pages()
     save_pages()
     index_df = access_index()
