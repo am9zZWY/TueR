@@ -75,8 +75,10 @@ async def pipeline(online: bool = True):
     indexer.add_next(tokenizer)
 
     def signal_handler(signum, frame):
-        print("Interrupt received, shutting down... Please wait. This may take a few seconds.")
-        for element in [crawler, indexer, downloader, tokenizer, loader, summarizer]:
+        print(
+            "Interrupt received, shutting down... Please wait. This may take a few seconds."
+        )
+        for element in [crawler, indexer, downloader, tokenizer, loader]:
             element.shutdown()
 
     signal.signal(signal.SIGINT, signal_handler)
@@ -106,30 +108,17 @@ async def pipeline(online: bool = True):
             # Ensure states are saved even if an exception occurs
             for element in [crawler, indexer, tokenizer]:
                 element.save_state()
-            index_pages()
-            save_pages()
-            index_df = access_index()
-            index_df.to_csv("inverted_index.csv")
-            print("State saved")
 
     # Compute TF-IDF matrix
     con.execute("TRUNCATE IDFs")
-    con.execute("""
+    con.execute(
+        """
         INSERT INTO IDFs(word, idf)
         SELECT word, LOG(N::double / COUNT(DISTINCT doc))
         FROM   TFs, (SELECT COUNT(*) FROM documents) AS _(N)
         GROUP BY word, N
-    """)
-
-    # Save the state+
-    for element in [crawler, indexer, tokenizer]:
-        element.save_state()
-    index_pages()
-    save_pages()
-    index_df = access_index()
-    index_df.to_csv("inverted_index.csv")
-    con.close()
-    print("State saved")
+    """
+    )
 
 
 def main():
