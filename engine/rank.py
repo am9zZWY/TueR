@@ -13,11 +13,29 @@ nltk.download('wordnet')
 
 nlp = spacy.load("en_core_web_sm", disable=["tok2vec", "parser", "senter"])
 
-def calc_num_similar_words(query_length: int, max_sim_words=7, decrease_rate=0.078) -> int:
-        num_sim_words = max_sim_words * math.exp(-decrease_rate * query_length)
-        return int(num_sim_words)
+def calc_num_similar_words(query_length: int, max_sim_words=7, decrease_rate=0.08) -> int:
+    """Exponential decay function to calculate the number of similar words to use based on the query length.
 
-def process_and_expand_query(query: str):
+    Args:
+        query_length (int): Query after preprocessing.
+        max_sim_words (int, optional): Max number of sim words we want to produce. Represents the baseline. Defaults to 7.
+        decrease_rate (float, optional): Rate we want our function to decrease. The bigger the number the higher the decrease. Defaults to 0.08.
+
+    Returns:
+        int: _description_
+    """
+    num_sim_words = max_sim_words * math.exp(-decrease_rate * query_length)
+    return int(num_sim_words)
+
+def process_and_expand_query(query: str)->tuple:
+    """Preprocess the query and expand it with similar words.
+
+    Args:
+        query (str): User query.
+
+    Returns:
+        tuple: Preprocessed query and expanded query with similar words and their similarity scores.
+    """
     default_num_sim_words = 7
     processed_query = preprocess_text(query)
     doc = nlp(processed_query)
