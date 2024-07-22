@@ -4,7 +4,17 @@ import time
 
 model = None
 
-def most_similar(word, topn=7)-> list:
+def most_similar(word: str, topn=7)-> list:
+    """Uses GloVe embeddings to find the most similar words to the given word.
+
+    Args:
+        word (str): The word to find similar words to.
+        topn (int, optional): Amount of similiar words we want to have. Defaults to 7.
+
+    Returns:
+        list: A list containing tuples of the most similar words and their similarity score.
+    """
+
     global model
     if model is None:
         try:
