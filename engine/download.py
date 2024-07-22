@@ -1,3 +1,4 @@
+import asyncio
 import lzma
 import pickle
 
@@ -9,7 +10,7 @@ from pipeline import PipelineElement
 
 
 class Downloader(PipelineElement):
-    def __init__(self, dbcon: duckdb.DuckDBPyConnection, storage_dir='downloads'):
+    def __init__(self, dbcon: duckdb.DuckDBPyConnection):
         super().__init__("Downloader")
         self.cursor = dbcon.cursor()
 
@@ -30,34 +31,36 @@ class Downloader(PipelineElement):
 
 
 class Loader(PipelineElement):
-    def __init__(self, dbcon: duckdb.DuckDBPyConnection, storage_dir='downloads'):
+    def __init__(self, dbcon: duckdb.DuckDBPyConnection):
         super().__init__("Loader")
         self.cursor = dbcon.cursor()
 
+        self.cursor.execute("TRUNCATE TFs")
+        self.cursor.execute("TRUNCATE IDFs")
+        self.cursor.execute("TRUNCATE words")
+        self.cursor.execute("TRUNCATE documents")
+
+        # Get pages from the database
+        self.cursor.execute("""
+            SELECT link, content FROM crawled
+        """)
+        self.pages = self.cursor.fetchall()
+
     def __del__(self):
-        self.cursor.close()
+        if hasattr(self, 'cursor'):
+            self.cursor.close()
 
     async def process(self):
         """
         Loads the BeautifulSoup object from a file, one at a time.
         """
 
-        self.cursor.execute("""
-            SELECT link, blob FROM crawled
-        """)
-
-        self.cursor.execute("TRUNCATE documents")
-        self.cursor.execute("TRUNCATE words")
-        self.cursor.execute("TRUNCATE TFs")
-        self.cursor.execute("TRUNCATE IDFs")
-
-        row = self.cursor.fetchone()
-        while row:
-            link, blob = row
+        # Add the pages to the task queue
+        while self.pages:
+            link, blob = self.pages.pop()
 
             soup = pickle.loads(lzma.decompress(blob))
+            if soup is not None:
+                await self.propagate_to_next(soup, link)
 
-            await self.propagate_to_next(soup, link)
-
-            row = self.cursor.fetchone()
-
+            print(f"Loaded {link}: {soup.title.string if soup.title else 'No title'}")

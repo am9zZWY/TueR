@@ -31,7 +31,8 @@ SEEDS = [
     "https://www.my-stuwe.de/en/",
     "https://www.unimuseum.uni-tuebingen.de/en/",
     "https://www.fsi.uni-tuebingen.de/en/",
-    "https://studieren.de/international-business-eberhard-karls-universitaet-tuebingen.studienprofil.t-0.a-68.c-110.html",
+    "https://studieren.de/international-business-eberhard-karls-universitaet-tuebingen.studienprofil.t-0.a-68.c-110"
+    ".html",
     "https://www.hih-tuebingen.de/en/?no_cache=1"
     # Events
     "https://www.dai-tuebingen.de/en/",
@@ -52,7 +53,7 @@ SEEDS = [
 LANG_DETECTOR = LanguageDetector()
 # Ignore errors
 SILENT_ERRORS = False
-SILENT_WARNINGS = True
+SILENT_WARNINGS = False
 
 
 def log_error(error_msg):
@@ -159,7 +160,6 @@ class Crawler(PipelineElement):
         Starts the crawling process.
         Is called in the Pipeline.
         Returns: None
-
         """
         async with ClientSession(connector=self._connector, timeout=self._timeout) as session:
             tasks = set()
@@ -339,7 +339,7 @@ class Crawler(PipelineElement):
                 log_warning(f"Retrying {url} in {retry_delay * (2 ** attempt)} seconds")
                 await asyncio.sleep(retry_delay * (2 ** attempt))
             except Exception as e:
-                log_error(f"Error fetching {url}: {response.status} {str(e)}")
+                log_error(f"Error fetching {url}: {e}")
 
     async def _handle_links(self, soup: BeautifulSoup, url: str):
         """

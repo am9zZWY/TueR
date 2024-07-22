@@ -57,7 +57,7 @@ class Summarizer(PipelineElement):
     def __del__(self):
         self.cursor.close()
 
-    async def process(self, data, doc_id, link):
+    async def process(self, data, link):
         """
         Summarizes the input text.
         """
@@ -81,8 +81,8 @@ class Summarizer(PipelineElement):
         self.cursor.execute("""
             UPDATE documents
             ON     summary = ?
-            WHERE  id = ?
-        """, [summarized_text, doc_id])
+            WHERE  link = ?
+        """, [summarized_text, link])
 
         print(f"Summarized {link} to: {summarized_text}")
 

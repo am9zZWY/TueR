@@ -3,9 +3,9 @@ from tokenizer import process_and_expand_query
 import pandas as pd
 
 
-def bm25(query: str, dbcon: duckdb.DuckDBPyConnection, k1=1.5, b=0.75, debug: bool = False):
+def bm25(query: str, dbcon: duckdb.DuckDBPyConnection, k1=1.5, b=0.75, debug: bool = False) -> list[dict]:
     """
-    Rank documents by BM25.
+    Rank documents by BM25. Additionally, use similar words aswell for ranking, however with a lower weight/portion.
     """
 
     # Create the query vector
@@ -43,7 +43,6 @@ def bm25(query: str, dbcon: duckdb.DuckDBPyConnection, k1=1.5, b=0.75, debug: bo
         WHERE  w.word = token AND w.id = i.word;
     """).df().set_index(['word'])['idf']
 
-    # Calculate the BM25 scores
     scores = []
 
     L = con.execute("SELECT COUNT(*) FROM documents").fetchall()[0][0]
@@ -67,7 +66,7 @@ def bm25(query: str, dbcon: duckdb.DuckDBPyConnection, k1=1.5, b=0.75, debug: bo
 
             score += weight * idf_val * (tf_val * (k1 + 1)) / (tf_val + k1 * (1 - b + b * L_d / L))
 
-        # Calculate BM25 for expanded query terms
+        # Calculate BM25 for expanded query terms with the according weight
         for synonym, weight in filter(lambda x: x[0] in words, sim_weight_list):
             idf_val = df_idf[synonym]
             tf_val = doc_tf[synonym]
@@ -92,7 +91,7 @@ def bm25(query: str, dbcon: duckdb.DuckDBPyConnection, k1=1.5, b=0.75, debug: bo
     return ranking
 
 
-def rank(query: str, debug: bool = False):
+def rank(query: str, debug: bool = False) -> list[dict]:
     """
     Rank the documents according to the query.
     Args:
