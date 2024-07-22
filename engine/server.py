@@ -1,8 +1,11 @@
+import lzma
+import pickle
+
+import duckdb
 import flask
 from flask import Flask, jsonify, request, Response
 from flask_cors import CORS, cross_origin
 
-from custom_db import get_page_by_id
 from preview import load_preview
 from rank import rank
 from summarize import get_summary_model
@@ -15,9 +18,13 @@ PORT = 8000
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
 
+dbcon: duckdb.DuckDBPyConnection = None
 
-def start_server(debug=False):
+
+def start_server(debug=False, con: duckdb.DuckDBPyConnection = None):
     print("Starting server...")
+    global dbcon
+    dbcon = con
     app.run(port=PORT, debug=debug, use_reloader=debug)
 
 
@@ -80,14 +87,28 @@ def summarize(doc_id):
         "summary": ""
     }
 
-    # Get the document by ID
-    doc = get_page_by_id(doc_id)
-    if doc.empty:
-        return Response("Document not found", status=404)
+    con = dbcon.cursor()
+    blob = con.execute("""
+        SELECT c.content
+        FROM   documents AS d, crawled AS c
+        WHERE  d.id = ?
+           AND d.link = c.link
+    """, [doc_id]).fetchall()[0][0]
+    con.close()
 
-    # Get the text from the document
-    text = doc['text'].values[0]
+    soup = pickle.loads(lzma.decompress(blob))
+    main_content = soup.find("main") or soup.find("article") \
+                   or soup.find("section") or soup.find("body")
+
+    if main_content is None:
+        print(f"Warning: No main content found for {doc_id}. Using entire body.")
+        main_content = soup
+
+    text = main_content.get_text()
+
+    # Summarize the text
     summarized_text = get_summary_model().summarize(text)
+
     result["summary"] = summarized_text
 
     return jsonify(result)
@@ -104,4 +125,7 @@ def site_map():
 
 
 if __name__ == "__main__":
-    start_server()
+    dbcon = duckdb.connect("crawlies.db")
+    start_server(con=dbcon)
+    dbcon.close()
+

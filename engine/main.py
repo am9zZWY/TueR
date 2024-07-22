@@ -151,7 +151,7 @@ def main():
             asyncio.run(pipeline(online=False))
         elif args.server:
             # Start the server
-            start_server(debug=args.debug)
+            start_server(debug=args.debug, con=con)
         elif args.file:
             # Rank the queries from the file
             queries = rank_from_file(args.file)
