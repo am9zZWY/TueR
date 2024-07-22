@@ -1,3 +1,4 @@
+import ipaddress
 import urllib
 from urllib.parse import urlparse, urljoin  # Parsing URLs
 # Robots.txt
@@ -73,7 +74,7 @@ def check_robots(url: str) -> bool:
     return rp.can_fetch("*", url)
 
 
-def safe_join(items):
+def safe_join(items: list[str | None]):
     """
     Safely joins a list of items into a string, separating them with a space.
     If an item is None, it is skipped.
@@ -87,7 +88,7 @@ def safe_join(items):
     return " ".join(str(item) for item in items if item is not None)
 
 
-def safe_str(item):
+def safe_str(item: str | None):
     """
     Safely converts an item to a string. If the item is None, an empty string is returned.
     Args:
@@ -97,3 +98,20 @@ def safe_str(item):
 
     """
     return str(item) if item is not None else ""
+
+
+def is_valid_ip(address: str) -> bool:
+    """
+    Checks if an address is a valid
+    Args:
+        address:
+
+    Returns:
+
+    """
+
+    try:
+        ipaddress.ip_address(address)
+        return True
+    except ValueError:
+        return False

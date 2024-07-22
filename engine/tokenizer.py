@@ -3,6 +3,7 @@ import re
 import duckdb
 import pandas as pd
 import spacy
+from unidecode import unidecode
 
 from pipeline import PipelineElement
 
@@ -17,11 +18,16 @@ Make sure you install the spaCy model with:
 python -m spacy download en_core_web_sm
 """
 
+# Load the spaCy model
+print("Loading spaCy model...")
+nlp = spacy.load("en_core_web_sm", disable=["tok2vec", "parser", "senter"])
+
+# Download the NLTK data
+print("Downloading NLTK data...")
 nltk.download('wordnet')
 
 
 # Define regular expressions for preprocessing
-
 def remove_html(text: str) -> str:
     html_tag = re.compile(r'<.*?>')
     text = html_tag.sub(r'', text)
@@ -44,6 +50,12 @@ def remove_prices(text: str) -> str:
     ''', re.VERBOSE | re.IGNORECASE)
 
     text = price_pattern.sub('', text)
+    return text
+
+
+def remove_degrees(text: str) -> str:
+    degree_clean = re.compile(r"\d+\s?°C|\d+\s?°F|\d+\s?°K")
+    text = degree_clean.sub(r'', text)
     return text
 
 
@@ -129,27 +141,42 @@ def remove_emoji(text: str) -> str:
     return text
 
 
+def remove_unicode(text: str) -> str:
+    return unidecode(text, replace_str='')
+
+
+def remove_special_characters(text: str) -> str:
+    special_characters = re.compile(r"[^\w\s]")
+    text = special_characters.sub(r' ', text)
+    return text
+
+
+def remove_single_character_tokens(text: str) -> str:
+    single_characters = re.compile(r"\b\w\b")
+    text = single_characters.sub(r'', text)
+    return text
+
+
 def lower(tokens: list[str]) -> list[str]:
     return [word.lower() for word in tokens]
 
 
 def preprocess_text(text: str) -> str:
     """Apply all preprocessing steps using regular expressions."""
+    text = remove_unicode(text)
     text = remove_url(text)
     text = remove_html(text)
     text = remove_emails(text)
+    text = remove_degrees(text)
     text = remove_times(text)
     text = remove_phone_number(text)
     text = remove_dates(text)
     text = remove_emoji(text)
     text = remove_prices(text)
     text = remove_percentages(text)
+    text = remove_special_characters(text)
+    text = remove_single_character_tokens(text)
     return text
-
-
-# Load the spaCy model
-print("Loading spaCy model...")
-nlp = spacy.load("en_core_web_sm", disable=["tok2vec", "parser", "senter"])
 
 
 def process_and_expand_query(query: str):
@@ -345,14 +372,15 @@ test_sentences = [
     "I'm 6'2\" tall and I weigh 180 lbs. I'm 25 years old.",
     "Das ist „wert ist der Stein“",
     "I'm running... but I'm tired",
-    "​​​​​​​+49"
+    "​​​​​​​+49",
+    "()(){}{)Hi{}}",
 ]
 
 if __name__ == "__main__":
     for sentence in test_sentences:
-         print(f"Original: {sentence}")
-         print(f"Tokenized: {process_text(sentence)}")
-         print()
+        print(f"Original: {sentence}")
+        print(f"Tokenized: {process_text(sentence)}")
+        print()
 
-    #dummy_query = "and the finally the what the I am the only tiger in the house"
-    #print(process_and_expand_query(dummy_query))
+    # dummy_query = "and the finally the what the I am the only tiger in the house"
+    # print(process_and_expand_query(dummy_query))
