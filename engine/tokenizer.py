@@ -302,7 +302,7 @@ class Tokenizer(PipelineElement):
                 WHERE  t.token = w.word
                 GROUP BY w.id, t.doc_id, t.token
             """)
-            print(f"Tokenized text for {link}")
+            print(f"Tokenized {link} ({self.task_queue.qsize()} tasks left)")
         except Exception as e:
             print(f"Error tokenizing text for {link}: {str(e)}")
             tokens = pd.DataFrame({'token': tokenized_text})

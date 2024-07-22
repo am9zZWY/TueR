@@ -20,7 +20,6 @@ class Indexer(PipelineElement):
         """
         Indexes the input data.
         """
-        print(f"Indexing {link}")
 
         if data is None:
             print(f"Failed to index {link} because the data was empty.")
@@ -44,6 +43,8 @@ class Indexer(PipelineElement):
         doc_id = self.cursor.execute("""
             SELECT id FROM documents WHERE link = ?
         """, [link]).fetchone()[0]
+
+        print(f"Indexed {link} as document {doc_id} ({self.task_queue.qsize()} tasks left)")
 
         if not self.is_shutdown():
             await self.propagate_to_next(soup, doc_id, link)

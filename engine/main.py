@@ -82,7 +82,7 @@ async def pipeline(online: bool = True):
     crawler.add_next(indexer)
 
     loader.add_next(indexer)
-    
+
     indexer.add_next(tokenizer)
 
     def signal_handler(signum, frame):

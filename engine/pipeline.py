@@ -54,7 +54,6 @@ class PipelineElement:
         while not self.task_queue.empty():
             try:
                 args = self.task_queue.get_nowait()
-                print(f"Processing remaining task in {self.name} during shutdown ({(self.task_queue.qsize())} remaining)")
                 await self.process(*args)
             except asyncio.QueueEmpty:
                 break  # Queue is empty, exit the loop
@@ -67,6 +66,9 @@ class PipelineElement:
         if self.active_tasks:
             print(f"Waiting for {len(self.active_tasks)} active tasks to complete in {self.name}")
             await asyncio.gather(*self.active_tasks, return_exceptions=True)
+
+        # Save state
+        self.save_state()
 
         self.shutdown_flag.set()
         print(f"Shutdown of {self.name} complete")

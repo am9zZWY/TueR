@@ -409,6 +409,8 @@ class Crawler(PipelineElement):
                 "found_links": list(self.urls_crawled)
             }))
 
+        print("Saved crawler state")
+
     def _load_state(self):
         """
         Loads the global state from a file into memory.
