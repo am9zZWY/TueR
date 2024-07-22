@@ -14,8 +14,7 @@ CREATE SEQUENCE doc_ids START 1;
 CREATE SEQUENCE word_ids START 1;
 
 CREATE TABLE crawled (
-    id      INTEGER DEFAULT nextval('doc_ids') PRIMARY KEY,
-    link    VARCHAR UNIQUE NOT NULL,
+    link    VARCHAR PRIMARY KEY,
     content BLOB NOT NULL
 );
 
