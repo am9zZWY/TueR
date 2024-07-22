@@ -1,9 +1,7 @@
-import asyncio
 import lzma
 import pickle
 
 import duckdb
-import pandas as pd
 from bs4 import BeautifulSoup
 
 from pipeline import PipelineElement
@@ -27,7 +25,8 @@ class Downloader(PipelineElement):
 
         self.cursor.execute(
             """INSERT INTO crawled(link, content) VALUES (?, ?)""",
-            [link, lzma.compress(pickle.dumps(data))])
+            [link, lzma.compress(pickle.dumps(data))],
+        )
 
 
 class Loader(PipelineElement):
@@ -41,13 +40,15 @@ class Loader(PipelineElement):
         self.cursor.execute("TRUNCATE documents")
 
         # Get pages from the database
-        self.cursor.execute("""
+        self.cursor.execute(
+            """
             SELECT link, content FROM crawled
-        """)
+        """
+        )
         self.pages = self.cursor.fetchall()
 
     def __del__(self):
-        if hasattr(self, 'cursor'):
+        if hasattr(self, "cursor"):
             self.cursor.close()
 
     async def process(self):

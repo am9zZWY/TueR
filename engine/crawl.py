@@ -98,11 +98,27 @@ class Crawler(PipelineElement):
         self.retry_delay = 1  # Delay between retries in seconds
         self.max_size = 1000  # Maximum number of pages to crawl
         self.max_concurrent = 10  # Maximum number of concurrent requests
-        self.max_same_domain_concurrent = 5  # Maximum number of concurrent requests to the same domain
+        self.max_same_domain_concurrent = (
+            5  # Maximum number of concurrent requests to the same domain
+        )
         self.rate_limit = 10  # Rate limit in seconds
-        self.ignore_domains = ["github.com", "linkedin.com", "xing.com", "instagram.com", "twitter.com", "youtube.com",
-                               "de.wikipedia.org", "wikipedia.org", "google.com", "google.de", "google.co.uk",
-                               "pinterest.com", "amazon.com", "cctue.de", "spotify.com"]
+        self.ignore_domains = [
+            "github.com",
+            "linkedin.com",
+            "xing.com",
+            "instagram.com",
+            "twitter.com",
+            "youtube.com",
+            "de.wikipedia.org",
+            "wikipedia.org",
+            "google.com",
+            "google.de",
+            "google.co.uk",
+            "pinterest.com",
+            "amazon.com",
+            "cctue.de",
+            "spotify.com",
+        ]
         self.langs = ["en", "en-de", "eng", "en-GB", "en-US", "english"]
         self.required_keywords = ["tübingen", "tuebingen", "tubingen", "t%C3%BCbingen"]
         self.user_agents = [
@@ -122,7 +138,7 @@ class Crawler(PipelineElement):
             "Accept-Language": "en-US,en;q=0.9,de;q=0.8",
             "Accept-Encoding": "gzip, deflate, br",
             "Connection": "keep-alive",
-            "Cache-Control": "max-age=0"
+            "Cache-Control": "max-age=0",
         }
 
         # Crawler state
@@ -161,24 +177,35 @@ class Crawler(PipelineElement):
         Is called in the Pipeline.
         Returns: None
         """
-        async with ClientSession(connector=self._connector, timeout=self._timeout) as session:
+        async with ClientSession(
+            connector=self._connector, timeout=self._timeout
+        ) as session:
             tasks = set()
             while not self.is_shutdown() and len(self.urls_crawled) < self.max_size:
                 while len(tasks) < self.max_concurrent and self.to_crawl_queue:
                     url = self.to_crawl_queue.popleft()
-                    if self.currently_crawled_base_urls.count(get_base_url(url)) >= self.max_same_domain_concurrent or \
-                            url in self.currently_crawled or url in self.ignore_links or url in self.urls_crawled:
+                    if (
+                        self.currently_crawled_base_urls.count(get_base_url(url))
+                        >= self.max_same_domain_concurrent
+                        or url in self.currently_crawled
+                        or url in self.ignore_links
+                        or url in self.urls_crawled
+                    ):
                         # Re-add to the queue
                         self.to_crawl_queue.append(url)
                     elif url not in self.ignore_links and url not in self.urls_crawled:
                         self.to_crawl_set.remove(url)
-                        task = asyncio.create_task(self._process_url_with_semaphore(session, url))
+                        task = asyncio.create_task(
+                            self._process_url_with_semaphore(session, url)
+                        )
                         tasks.add(task)
 
                 if not tasks:
                     break
 
-                done, tasks = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+                done, tasks = await asyncio.wait(
+                    tasks, return_when=asyncio.FIRST_COMPLETED
+                )
 
                 for task in done:
                     try:
@@ -229,9 +256,13 @@ class Crawler(PipelineElement):
             log_warning(f"Ignoring {url} because it is already being crawled")
             return
 
-        if self.currently_crawled_base_urls.count(base_url) >= self.max_same_domain_concurrent:
+        if (
+            self.currently_crawled_base_urls.count(base_url)
+            >= self.max_same_domain_concurrent
+        ):
             log_warning(
-                f"Ignoring {url} because the base URL is already being crawled {self.max_same_domain_concurrent} times")
+                f"Ignoring {url} because the base URL is already being crawled {self.max_same_domain_concurrent} times"
+            )
             return
 
         if not url.startswith("http"):
@@ -281,10 +312,17 @@ class Crawler(PipelineElement):
 
         check_html_tag_lang = soup.find("html").get("lang") in self.langs
         check_xml_tag_lang = soup.find("html").get("xml:lang") in self.langs
-        check_link_lang = any(split == lang for split in url.split("/") for lang in self.langs)
+        check_link_lang = any(
+            split == lang for split in url.split("/") for lang in self.langs
+        )
         check_text_lang = LANG_DETECTOR.detect(text) in self.langs
 
-        if not check_html_tag_lang and not check_xml_tag_lang and not check_link_lang and not check_text_lang:
+        if (
+            not check_html_tag_lang
+            and not check_xml_tag_lang
+            and not check_link_lang
+            and not check_text_lang
+        ):
             log_warning(f"Ignoring {url} because it is not in the correct language")
             self.ignore_links.add(url)
             self.currently_crawled.remove(url)
@@ -292,7 +330,9 @@ class Crawler(PipelineElement):
             return
 
         if not any(keyword in text for keyword in self.required_keywords):
-            log_warning(f"Ignoring {url} because it does not contain the required keywords")
+            log_warning(
+                f"Ignoring {url} because it does not contain the required keywords"
+            )
             self.ignore_links.add(url)
             self.currently_crawled.remove(url)
             self.currently_crawled_base_urls.remove(base_url)
@@ -326,19 +366,29 @@ class Crawler(PipelineElement):
 
         self._page_count += 1
         for attempt in range(max_retries):
-            print(f"Fetching {url} (attempt {attempt + 1}/{max_retries})" if attempt > 0 else f"Fetching {url}")
+            print(
+                f"Fetching {url} (attempt {attempt + 1}/{max_retries})"
+                if attempt > 0
+                else f"Fetching {url}"
+            )
             try:
-                async with session.get(url, timeout=self._timeout, headers=self.headers, allow_redirects=True) as \
-                        response:
+                async with session.get(
+                    url,
+                    timeout=self._timeout,
+                    headers=self.headers,
+                    allow_redirects=True,
+                ) as response:
                     response.raise_for_status()
                     return await response.text()
             except (TimeoutError, ClientError) as e:
                 if attempt == max_retries - 1:
-                    log_error(f"Failed to process {url} after {max_retries} attempts: {str(e)}")
+                    log_error(
+                        f"Failed to process {url} after {max_retries} attempts: {str(e)}"
+                    )
                     return
                 # Exponential wait time
                 log_warning(f"Retrying {url} in {retry_delay * (2 ** attempt)} seconds")
-                await asyncio.sleep(retry_delay * (2 ** attempt))
+                await asyncio.sleep(retry_delay * (2**attempt))
             except Exception as e:
                 log_error(f"Error fetching {url}: {e}")
 
@@ -380,16 +430,51 @@ class Crawler(PipelineElement):
                 continue
 
             # Check if link is a file
-            if found_link.endswith((".pdf", ".doc", ".docx", ".ppt", ".pptx", ".xls", ".xlsx", ".csv", ".zip", ".rar",
-                                    ".tar", ".gz", ".7z", ".mp3", ".mp4", ".avi", ".mkv", ".mov", ".flv", ".wav",
-                                    ".ogg", ".webm", ".m4a", ".flac", ".aac", ".wma", ".jpg", ".jpeg", ".png", ".gif",
-                                    ".bmp", ".svg", ".webp")):
+            if found_link.endswith(
+                (
+                    ".pdf",
+                    ".doc",
+                    ".docx",
+                    ".ppt",
+                    ".pptx",
+                    ".xls",
+                    ".xlsx",
+                    ".csv",
+                    ".zip",
+                    ".rar",
+                    ".tar",
+                    ".gz",
+                    ".7z",
+                    ".mp3",
+                    ".mp4",
+                    ".avi",
+                    ".mkv",
+                    ".mov",
+                    ".flv",
+                    ".wav",
+                    ".ogg",
+                    ".webm",
+                    ".m4a",
+                    ".flac",
+                    ".aac",
+                    ".wma",
+                    ".jpg",
+                    ".jpeg",
+                    ".png",
+                    ".gif",
+                    ".bmp",
+                    ".svg",
+                    ".webp",
+                )
+            ):
                 continue
 
-            if (found_link not in self.ignore_links
-                    and found_link not in self.urls_crawled
-                    and found_link not in self.to_crawl_set
-                    and found_link.startswith("http")):
+            if (
+                found_link not in self.ignore_links
+                and found_link not in self.urls_crawled
+                and found_link not in self.to_crawl_set
+                and found_link.startswith("http")
+            ):
                 self.to_crawl_queue.append(found_link)
                 self.to_crawl_set.add(found_link)
 
@@ -407,11 +492,15 @@ class Crawler(PipelineElement):
 
         with open(f"crawler_states/global.json", "w") as f:
             # Write it as json
-            f.write(json.dumps({
-                "to_crawl": to_crawl_queue,
-                "ignore_links": list(self.ignore_links),
-                "found_links": list(self.urls_crawled)
-            }))
+            f.write(
+                json.dumps(
+                    {
+                        "to_crawl": to_crawl_queue,
+                        "ignore_links": list(self.ignore_links),
+                        "found_links": list(self.urls_crawled),
+                    }
+                )
+            )
 
         print("Saved crawler state")
 

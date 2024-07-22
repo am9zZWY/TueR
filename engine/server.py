@@ -36,7 +36,7 @@ def hello_world():
 @app.route("/search")
 @cross_origin()
 def search():
-    query = request.args.get('query', '')
+    query = request.args.get("query", "")
 
     result = {
         "query": query,
@@ -52,8 +52,10 @@ def search():
             "url": "https://www.uni-tuebingen.de",
             "description": "Description " + str(page_id),
             "summary": "Summary " + str(page_id),
-            "score": 0.5
-        } for page_id in range(100)]
+            "score": 0.5,
+        }
+        for page_id in range(100)
+    ]
     result["results"] = results
 
     # Rank documents according to query
@@ -72,33 +74,37 @@ async def preview():
         A Response containing the full HTML content with inlined CSS and JavaScript
     """
 
-    url = request.args.get('url', '')
+    url = request.args.get("url", "")
     if not url:
         return Response("No URL provided", status=400)
 
     soup = await load_preview(url)
-    return Response(str(soup), mimetype='text/html')
+    return Response(str(soup), mimetype="text/html")
 
 
 @app.route("/summarize/<int:doc_id>")
 def summarize(doc_id):
-    result = {
-        "doc_id": doc_id,
-        "summary": ""
-    }
+    result = {"doc_id": doc_id, "summary": ""}
 
     con = dbcon.cursor()
-    blob = con.execute("""
+    blob = con.execute(
+        """
         SELECT c.content
         FROM   documents AS d, crawled AS c
         WHERE  d.id = ?
            AND d.link = c.link
-    """, [doc_id]).fetchall()[0][0]
+    """,
+        [doc_id],
+    ).fetchall()[0][0]
     con.close()
 
     soup = pickle.loads(lzma.decompress(blob))
-    main_content = soup.find("main") or soup.find("article") \
-                   or soup.find("section") or soup.find("body")
+    main_content = (
+        soup.find("main")
+        or soup.find("article")
+        or soup.find("section")
+        or soup.find("body")
+    )
 
     if main_content is None:
         print(f"Warning: No main content found for {doc_id}. Using entire body.")
@@ -118,13 +124,15 @@ def summarize(doc_id):
 def doc_count():
     con = dbcon.cursor()
 
-    doc_count = con.execute("""
+    doc_count = con.execute(
+        """
         SELECT COUNT(*) FROM documents
-    """).fetchall()[0][0]
+    """
+    ).fetchall()[0][0]
 
     con.cursor()
 
-    return jsonify({'doc_count': doc_count})
+    return jsonify({"doc_count": doc_count})
 
 
 @app.route("/site-map")

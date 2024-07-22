@@ -19,73 +19,81 @@ print("Loading spaCy model...")
 nlp = spacy.load("en_core_web_sm", disable=["tok2vec", "parser", "senter"])
 
 
-
-
 # Define regular expressions for preprocessing
 def remove_html(text: str) -> str:
-    html_tag = re.compile(r'<.*?>')
-    text = html_tag.sub(r'', text)
+    html_tag = re.compile(r"<.*?>")
+    text = html_tag.sub(r"", text)
     return text
 
 
 def remove_emails(text: str) -> str:
     email_clean = re.compile(r"[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+")
-    text = email_clean.sub(r'', text)
+    text = email_clean.sub(r"", text)
     return text
 
 
 def remove_prices(text: str) -> str:
-    price_pattern = re.compile(r'''
+    price_pattern = re.compile(
+        r"""
         (?:(?:\$|€|£|¥)(?:\s?))                     # Currency symbols at the start
         \d{1,3}(?:,\d{3})*(?:\.\d{1,2})?            # Numbers with optional thousands separators and decimal points
         |
         \d{1,3}(?:,\d{3})*(?:\.\d{1,2})?            # Numbers with optional thousands separators and decimal points
         (?:\s?(?:\$|€|£|¥|USD|EUR|GBP|JPY))         # Currency symbols or codes at the end
-    ''', re.VERBOSE | re.IGNORECASE)
+    """,
+        re.VERBOSE | re.IGNORECASE,
+    )
 
-    text = price_pattern.sub('', text)
+    text = price_pattern.sub("", text)
     return text
 
 
 def remove_degrees(text: str) -> str:
     degree_clean = re.compile(r"\d+\s?°C|\d+\s?°F|\d+\s?°K")
-    text = degree_clean.sub(r'', text)
+    text = degree_clean.sub(r"", text)
     return text
 
 
 def remove_percentages(text: str) -> str:
     percentage_clean = re.compile(r"\d+%")
-    text = percentage_clean.sub(r'', text)
+    text = percentage_clean.sub(r"", text)
     return text
 
 
 def remove_phone_number(text: str) -> str:
     # This pattern matches various phone number formats
     # Thanks to https://stackoverflow.com/a/56450924
-    phone_pattern = re.compile(r'''
+    phone_pattern = re.compile(
+        r"""
         ((\+\d{1,2}\s?)?1?\-?\.?\s?\(?\d{3}\)?[\s.-]?)?\d{3}[\s.-]?\d{4}
-    ''', re.VERBOSE)
+    """,
+        re.VERBOSE,
+    )
 
     # Replace matched phone numbers with an empty string
-    text = phone_pattern.sub('', text)
+    text = phone_pattern.sub("", text)
     return text
 
 
 def remove_dates(text: str) -> str:
     # This pattern matches various date formats
     # Thanks to https://stackoverflow.com/a/8768241
-    date_pattern = re.compile(r'''
+    date_pattern = re.compile(
+        r"""
         ^(?:(?:(?:0?[13578]|1[02])(\/|-|\.)31)\1|(?:(?:0?[1,3-9]|1[0-2])(\/|-|\.)(?:29|30)\2))(?:(?:1[6-9]|[2-9]\d)?\d{2})$|^(?:0?2(\/|-|\.)29\3(?:(?:(?:1[6-9]|[2-9]\d)?(?:0[48]|[2468][048]|[13579][26])|(?:(?:16|[2468][048]|[3579][26])00))))$|^(?:(?:0?[1-9])|(?:1[0-2]))(\/|-|\.)(?:0?[1-9]|1\d|2[0-8])\4(?:(?:1[6-9]|[2-9]\d)?\d{2})$
-    ''', re.VERBOSE)
+    """,
+        re.VERBOSE,
+    )
 
     # Replace matched phone numbers with an empty string
-    text = date_pattern.sub('', text)
+    text = date_pattern.sub("", text)
     return text
 
 
 def remove_times(text: str) -> str:
     # This pattern matches various time formats
-    time_pattern = re.compile(r'''
+    time_pattern = re.compile(
+        r"""
         \b                                  # Word boundary
         (?:
             (?:1[0-2]|0?[1-9])              # Hours: 1-12 with optional leading zero
@@ -106,48 +114,53 @@ def remove_times(text: str) -> str:
             )?
         )
         \b                                  # Word boundary
-    ''', re.VERBOSE | re.IGNORECASE)
+    """,
+        re.VERBOSE | re.IGNORECASE,
+    )
 
     # Replace matched times with an empty string
-    text = time_pattern.sub('', text)
+    text = time_pattern.sub("", text)
     return text
 
 
 def remove_url(text: str) -> str:
     url_clean = re.compile(r"https://\S+|www\.\S+")
-    text = url_clean.sub(r'', text)
+    text = url_clean.sub(r"", text)
     return text
 
 
 # Removes Emojis
 def remove_emoji(text: str) -> str:
-    emoji_clean = re.compile("["
-                             u"\U0001F600-\U0001F64F"  # emoticons
-                             u"\U0001F300-\U0001F5FF"  # symbols & pictographs
-                             u"\U0001F680-\U0001F6FF"  # transport & map symbols
-                             u"\U0001F1E0-\U0001F1FF"  # flags (iOS)
-                             u"\U00002702-\U000027B0"
-                             u"\U000024C2-\U0001F251"
-                             "]+", flags=re.UNICODE)
-    text = emoji_clean.sub(r'', text)
+    emoji_clean = re.compile(
+        "["
+        "\U0001F600-\U0001F64F"  # emoticons
+        "\U0001F300-\U0001F5FF"  # symbols & pictographs
+        "\U0001F680-\U0001F6FF"  # transport & map symbols
+        "\U0001F1E0-\U0001F1FF"  # flags (iOS)
+        "\U00002702-\U000027B0"
+        "\U000024C2-\U0001F251"
+        "]+",
+        flags=re.UNICODE,
+    )
+    text = emoji_clean.sub(r"", text)
     url_clean = re.compile(r"https://\S+|www\.\S+")
-    text = url_clean.sub(r'', text)
+    text = url_clean.sub(r"", text)
     return text
 
 
 def remove_unicode(text: str) -> str:
-    return unidecode(text, replace_str='')
+    return unidecode(text, replace_str="")
 
 
 def remove_special_characters(text: str) -> str:
     special_characters = re.compile(r"[^\w\s]")
-    text = special_characters.sub(r' ', text)
+    text = special_characters.sub(r" ", text)
     return text
 
 
 def remove_single_character_tokens(text: str) -> str:
     single_characters = re.compile(r"\b\w\b")
-    text = single_characters.sub(r'', text)
+    text = single_characters.sub(r"", text)
     return text
 
 
@@ -171,7 +184,6 @@ def preprocess_text(text: str) -> str:
     text = remove_special_characters(text)
     text = remove_single_character_tokens(text)
     return text
-
 
 
 def process_text(text: str) -> list[str] | list[tuple]:
@@ -216,7 +228,12 @@ class Tokenizer(PipelineElement):
         soup = data
 
         # Get the text from the main content
-        main_content = soup.find("main") or soup.find("article") or soup.find("section") or soup.find("body")
+        main_content = (
+            soup.find("main")
+            or soup.find("article")
+            or soup.find("section")
+            or soup.find("body")
+        )
 
         if main_content is None:
             print(f"Warning: No main content found for {link}. Using entire body.")
@@ -224,9 +241,34 @@ class Tokenizer(PipelineElement):
 
         # List of tags you want to extract text from
         tags_to_extract = [
-            'title', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'span', 'div', 'li',
-            'td', 'th', 'a', 'b', 'strong', 'i', 'em', 'mark', 'small', 'del', 'ins',
-            'sub', 'sup', 'q', 'blockquote', 'code', 'pre'
+            "title",
+            "h1",
+            "h2",
+            "h3",
+            "h4",
+            "h5",
+            "h6",
+            "p",
+            "span",
+            "div",
+            "li",
+            "td",
+            "th",
+            "a",
+            "b",
+            "strong",
+            "i",
+            "em",
+            "mark",
+            "small",
+            "del",
+            "ins",
+            "sub",
+            "sup",
+            "q",
+            "blockquote",
+            "code",
+            "pre",
         ]
 
         extracted_text = []
@@ -242,13 +284,17 @@ class Tokenizer(PipelineElement):
 
         # Process meta-description and title
         description = soup.find("meta", attrs={"name": "description"})
-        description_content = clean_text(description.get("content") if description else "")
+        description_content = clean_text(
+            description.get("content") if description else ""
+        )
         title = soup.find("title")
         title_content = clean_text(title.string if title else "")
 
         # Process image alt texts
         img_tags = soup.find_all("img")
-        alt_texts = [clean_text(img.get("alt", "")) for img in img_tags if img.get("alt")]
+        alt_texts = [
+            clean_text(img.get("alt", "")) for img in img_tags if img.get("alt")
+        ]
 
         # Combine all text
         all_text = extracted_text + [description_content, title_content] + alt_texts
@@ -257,28 +303,32 @@ class Tokenizer(PipelineElement):
         # Tokenize the text
         tokenized_text: list[str] = process_text(text=text)
         try:
-            tokens = pd.DataFrame({'token': tokenized_text})
-            tokens['doc_id'] = doc_id
-            self.cursor.execute("""
+            tokens = pd.DataFrame({"token": tokenized_text})
+            tokens["doc_id"] = doc_id
+            self.cursor.execute(
+                """
                 INSERT INTO words(word)
                 SELECT DISTINCT token
-                FROM   tokens 
+                FROM   tokens
                     EXCEPT
                 SELECT word FROM words
-            """)
+            """
+            )
 
-            self.cursor.execute("""
+            self.cursor.execute(
+                """
                 INSERT INTO TFs(word, doc, tf)
                 SELECT w.id, t.doc_id, COUNT(*)
                 FROM   tokens AS t, words AS w
                 WHERE  t.token = w.word
                 GROUP BY w.id, t.doc_id, t.token
-            """)
+            """
+            )
             print(f"Tokenized {link} ({self.task_queue.qsize()} tasks left)")
         except Exception as e:
             print(f"Error tokenizing text for {link}: {str(e)}")
-            tokens = pd.DataFrame({'token': tokenized_text})
-            tokens['doc_id'] = doc_id
+            tokens = pd.DataFrame({"token": tokenized_text})
+            tokens["doc_id"] = doc_id
 
 
 def clean_text(text):
@@ -286,7 +336,7 @@ def clean_text(text):
     Clean the input text by removing excess whitespace.
     """
     # Remove excess whitespace
-    text = re.sub(r'\s+', ' ', text).strip()
+    text = re.sub(r"\s+", " ", text).strip()
     return text
 
 

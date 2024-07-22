@@ -64,7 +64,9 @@ class PipelineElement:
 
         # Wait for any active tasks to complete
         if self.active_tasks:
-            print(f"Waiting for {len(self.active_tasks)} active tasks to complete in {self.name}")
+            print(
+                f"Waiting for {len(self.active_tasks)} active tasks to complete in {self.name}"
+            )
             await asyncio.gather(*self.active_tasks, return_exceptions=True)
 
         # Save state

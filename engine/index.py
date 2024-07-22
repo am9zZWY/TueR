@@ -33,18 +33,28 @@ class Indexer(PipelineElement):
 
         # Snippet or description
         description = soup.find("meta", attrs={"name": "description"})
-        description_content = description.get("content") if description is not None else ""
+        description_content = (
+            description.get("content") if description is not None else ""
+        )
 
-        self.cursor.execute("""
+        self.cursor.execute(
+            """
             INSERT INTO documents(link, title, description)
             VALUES (?, ?, ?)
-        """, [link, title_content, description_content])
+        """,
+            [link, title_content, description_content],
+        )
 
-        doc_id = self.cursor.execute("""
+        doc_id = self.cursor.execute(
+            """
             SELECT id FROM documents WHERE link = ?
-        """, [link]).fetchone()[0]
+        """,
+            [link],
+        ).fetchone()[0]
 
-        print(f"Indexed {link} as document {doc_id} ({self.task_queue.qsize()} tasks left)")
+        print(
+            f"Indexed {link} as document {doc_id} ({self.task_queue.qsize()} tasks left)"
+        )
 
         if not self.is_shutdown():
             await self.propagate_to_next(soup, doc_id, link)
