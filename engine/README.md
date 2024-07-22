@@ -1,67 +1,59 @@
-# Search Engine
+# TueR – Tübingen Retrieval (Engine)
 
-## Usage
+This is the engine for the **TüR** (**Tü**bingen **R**etrieval) project, built with Python, Flask, DuckDB, and lots of motivation.
 
-- To crawl pages, you need to run the following command:
-
-   ```
-   python main.py --online
-   ```
-- Run the following command to start the server:
-
-   ```
-   python server.py
-   ```
-
-- Open your browser and navigate to `http://localhost:8000/` to view the application.
+## Table of Contents
+1. [Requirements](#requirements)
+2. [Installation](#installation)
+3. [Usage](#usage)
+4. [Server](#server)
 
 ## Requirements
 
-- `Python 3`
-- `pip`
-- `virtualenv`
+- Python 3
+- pip
+- virtualenv
 
 ## Installation
 
 1. **Install Python 3:**
-
-- Download and install the latest version of Python 3 from the official website.
+  - Download and install the latest version of Python 3 from the official website.
 
 2. **Install virtualenv:**
-
-- Open a terminal and run the following command:
-
-   ```
+   ```shell
    pip install virtualenv
    ```
 
-3. **Create a virtual environment:**
-
-- Create the virtual environment:
-
-  ```
-  virtualenv --python=3.11 .venv
-  ```
-
-- Activate the virtual environment:
-
-  ```
-  source .venv/bin/activate
-  ```
+3. **Create and activate a virtual environment:**
+   ```shell
+   virtualenv --python=3.11 .venv
+   source .venv/bin/activate
+   ```
 
 4. **Install requirements:**
-
-- Ensure you have a requirements.txt file in your project directory.
-- Run the following command to install the dependencies:
-
-   ```
+   ```shell
    pip install -r requirements.txt
+   python -m spacy download en_core_web_sm
    ```
 
-- For the text-processing part, we use `spaCy`. You need to download the English model by running the following command:
+## Usage
 
-   ```
-    python -m spacy download en_core_web_sm
-   ```
+### Crawl pages:
+```shell
+python main.py --online
+```
 
-5. **Start developing the project**
+### Start the server:
+```shell
+python server.py
+```
+
+### Access the application:
+Open your browser and navigate to [http://localhost:8000/](http://localhost:8000/)
+
+## Server
+
+The server is built with Flask and runs on port 8000 by default. To start the server, use the following command:
+```shell
+python server.py
+```
