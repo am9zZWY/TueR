@@ -108,6 +108,7 @@ async def pipeline(online: bool = True):
             # Ensure states are saved even if an exception occurs
             for element in [crawler, indexer, tokenizer]:
                 element.save_state()
+            print("State saved.")
 
     # Compute TF-IDF matrix
     con.execute("TRUNCATE IDFs")
@@ -119,6 +120,7 @@ async def pipeline(online: bool = True):
         GROUP BY word, N
     """
     )
+    con.close()
 
 
 def main():
