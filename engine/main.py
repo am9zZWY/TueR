@@ -36,10 +36,10 @@ nest_asyncio.apply()
 
 # Database setup
 con = duckdb.connect("crawlies.db")
-if not os.path.isfile('crawler_states/global.json'):
-    with open('setup.sql', 'r') as statements:
+if not os.path.isfile("crawler_states/global.json"):
+    with open("setup.sql", "r") as statements:
         # Execute each statement
-        for statement in statements.read().split(';'):
+        for statement in statements.read().split(";"):
             if statement.strip():  # Skip empty statements
                 con.execute(statement)
 
@@ -87,7 +87,9 @@ async def pipeline(online: bool = True):
     indexer.add_next(tokenizer)
 
     def signal_handler(signum, frame):
-        print("Interrupt received, shutting down... Please wait. This may take a few seconds.")
+        print(
+            "Interrupt received, shutting down... Please wait. This may take a few seconds."
+        )
         global is_shutting_down
         if not is_shutting_down:
             is_shutting_down = True
@@ -123,7 +125,7 @@ async def pipeline(online: bool = True):
         SELECT word, LOG(N::double / COUNT(DISTINCT doc))
         FROM   TFs, (SELECT COUNT(*) FROM documents) AS _(N)
         GROUP BY word, N
-        """
+    """
     )
     con.close()
 
@@ -131,11 +133,32 @@ async def pipeline(online: bool = True):
 def main():
     # Parse the command line arguments
     parser = argparse.ArgumentParser(description=f"Find anything with {ENGINE_NAME}!")
-    parser.add_argument("--online", help="Run pipeline from the web (online)", action="store_true", required=False)
-    parser.add_argument("--offline", help="Run pipeline from the disk (offline)", action="store_true", required=False)
-    parser.add_argument("-s", "--server", help="Run the server", action="store_true", required=False)
-    parser.add_argument("-f", "--file", help="Queries file", default="queries.txt", type=str, required=False)
-    parser.add_argument("-d", "--debug", help="Debug mode", action="store_true", required=False)
+    parser.add_argument(
+        "--online",
+        help="Run pipeline from the web (online)",
+        action="store_true",
+        required=False,
+    )
+    parser.add_argument(
+        "--offline",
+        help="Run pipeline from the disk (offline)",
+        action="store_true",
+        required=False,
+    )
+    parser.add_argument(
+        "-s", "--server", help="Run the server", action="store_true", required=False
+    )
+    parser.add_argument(
+        "-f",
+        "--file",
+        help="Queries file",
+        default="queries.txt",
+        type=str,
+        required=False,
+    )
+    parser.add_argument(
+        "-d", "--debug", help="Debug mode", action="store_true", required=False
+    )
 
     try:
         args = parser.parse_args()
@@ -152,14 +175,15 @@ def main():
             start_server(debug=args.debug, con=con)
         elif args.file:
             # Rank the queries from the file
-            queries = rank_from_file(args.file)
-            for i, query in enumerate(queries):
-                print(f"Query {i + 1}: {query}")
+            rank_from_file(args.file)
         else:
             parser.print_help()
 
     except argparse.ArgumentError as e:
-        print(f"An error occurred while parsing the command line arguments: {str(e)}", file=sys.stderr)
+        print(
+            f"An error occurred while parsing the command line arguments: {str(e)}",
+            file=sys.stderr,
+        )
     except Exception as e:
         print(f"An error occurred: {str(e)}", file=sys.stderr)
     finally:
