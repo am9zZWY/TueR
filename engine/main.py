@@ -16,7 +16,6 @@ import signal
 import duckdb
 
 # Pipeline
-from custom_db import index_pages, access_index, save_pages
 from crawl import Crawler
 from download import Downloader, Loader
 from tokenizer import Tokenizer

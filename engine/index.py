@@ -1,6 +1,5 @@
 import duckdb
 
-from custom_db import load_pages
 from pipeline import PipelineElement
 
 

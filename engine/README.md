@@ -1,5 +1,20 @@
 # Search Engine
 
+## Usage
+
+- To crawl pages, you need to run the following command:
+
+   ```
+   python main.py --online
+   ```
+- Run the following command to start the server:
+
+   ```
+   python server.py
+   ```
+
+- Open your browser and navigate to `http://localhost:8000/` to view the application.
+
 ## Requirements
 
 - `Python 3`
@@ -50,13 +65,3 @@
    ```
 
 5. **Start developing the project**
-
-## Usage
-
-- Run the following command to start the server:
-
-```
-python server.py
-```
-
-- Open your browser and navigate to `http://localhost:5000/` to view the application.
