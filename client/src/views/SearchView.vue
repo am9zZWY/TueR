@@ -21,7 +21,7 @@
           :class="{ 'bg-gray-200 bg-none': query.length === 0 }"
           class="absolute right-1.5 top-0.5 bg-gradient-to-bl from-primary-700 to-secondary-400 text-white rounded-full p-2 hover:from-primary-700 hover:to-tertiary-800 transition duration-300"
           type="button"
-          :disabled="query.length === 0"
+          :disabled="query.length === 0 || isSearching"
           @click="search"
         >
           <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -30,8 +30,12 @@
           </svg>
         </button>
       </div>
+      <div v-if="isSearching" class="text-center text-gray-600 mt-8">
+        <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-tertiary-500 mx-auto"></div>
+        Searching doors for "{{ query }}"
+      </div>
       <div>
-        <h4 class="font-semibold text-gray-600 mb-2">Last Searches</h4>
+        <h4 class="font-semibold text-gray-600 mb-2" v-if="lastSearches.length > 0">Last Searches</h4>
         <span v-for="(lastSearch, index) in lastSearches.slice(lastSearches.length - 3, lastSearches.length)"
               class="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-medium cursor-pointer hover:bg-gray-200 hover:text-gray-700 transition duration-300"
               :key="`{lastSearch}-${index}`" @click="query = lastSearch">
@@ -76,7 +80,7 @@ import { gsap } from 'gsap'
 import SearchResult from '@/components/SearchResult.vue'
 
 const searchStore = useSearchStore()
-const { results, lastSearches, lastQuery } = storeToRefs(searchStore)
+const { results, lastSearches, lastQuery, isSearching } = storeToRefs(searchStore)
 
 const loading = false
 

@@ -24,6 +24,7 @@ const dummyResults: SearchResult[] = [
 export const useSearchStore = defineStore('search', () => {
   const localStore = useLocal()
 
+  const isSearching = ref(false)
   const lastQuery = ref('')
   const internalResults = ref<SearchResult[]>([])
   const results = computed(() => {
@@ -35,8 +36,10 @@ export const useSearchStore = defineStore('search', () => {
   const lastSearches = ref<string[]>(localStore.getConfig('lastSearches') ?? [])
 
   function search(query: string) {
+    isSearching.value = true
     if (query === '') {
       internalResults.value = []
+      isSearching.value = false
       return
     }
 
@@ -45,6 +48,7 @@ export const useSearchStore = defineStore('search', () => {
     return fetch(`${ENGINE_ENDPOINT}/search?query=${query}`)
       .then((response) => response.json())
       .then((data: ApiSearchResultsResponse) => {
+        isSearching.value = false
         internalResults.value = data.results
         lastSearches.value.push(query)
         localStore.setConfig('lastSearches', lastSearches.value)
@@ -55,6 +59,7 @@ export const useSearchStore = defineStore('search', () => {
     results,
     lastSearches,
     lastQuery,
+    isSearching,
     search
   }
 })
