@@ -3,8 +3,9 @@ import threading
 
 
 class PipelineElement:
-    def __init__(self, name):
+    def __init__(self, name, timeout=10.0):
         self.name = name
+        self.timeout = timeout
         self.next = []
         self.executor = None
         self.task_queue = asyncio.Queue()
@@ -33,17 +34,32 @@ class PipelineElement:
         while not self.is_shutdown():
             try:
                 args = await asyncio.wait_for(self.task_queue.get(), timeout=1.0)
-
-                if asyncio.iscoroutinefunction(self.process):
-                    await self.process(*args)
-                else:
-                    await self.loop.run_in_executor(self.executor, self.process, *args)
-                self.task_queue.task_done()
-                self.active_tasks.discard(asyncio.current_task())
+                task = asyncio.create_task(self.execute_task(*args))
+                self.active_tasks.add(task)
+                try:
+                    await asyncio.wait_for(
+                        task, timeout=self.timeout
+                    )
+                except asyncio.TimeoutError:
+                    print(
+                        f"Task in {self.name} timed out after {self.timeout} seconds, skipping"
+                    )
+                    task.cancel()
+                except Exception as e:
+                    print(f"Error executing task in {self.name}: {e}")
+                finally:
+                    self.active_tasks.discard(task)
+                    self.task_queue.task_done()
             except asyncio.TimeoutError:
                 continue
             except Exception as e:
                 print(f"Error in {self.name} worker loop: {e}")
+
+    async def execute_task(self, *args):
+        if asyncio.iscoroutinefunction(self.process):
+            await self.process(*args)
+        else:
+            await self.loop.run_in_executor(self.executor, self.process, *args)
 
     async def propagate_to_next(self, *args):
         for element in self.next:
@@ -56,10 +72,12 @@ class PipelineElement:
                 args = self.task_queue.get_nowait()
                 await self.process(*args)
             except asyncio.QueueEmpty:
+                print(f"Queue is empty in {self.name}")
                 break  # Queue is empty, exit the loop
             except Exception as e:
                 print(f"Error processing task during shutdown in {self.name}: {e}")
             finally:
+                print(f"Task done in {self.name}")
                 self.task_queue.task_done()
 
         # Wait for any active tasks to complete
