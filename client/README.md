@@ -1,39 +1,33 @@
-# client-vue
+# TueR – Tübingen Retrieval (Frontend)
 
-This template should help get you started developing with Vue 3 in Vite.
+This is the frontend for the **TüR** – **Tü**bingen **R**etrieval-project, built with Vue 3 and Vite.
 
-## Recommended IDE Setup
+## Requirements
 
-[VSCode](https://code.visualstudio.com/) + [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
+- [bun.sh](https://bun.sh) (the runtime environment for this project)
 
-## Type Support for `.vue` Imports in TS
+## Getting Started
 
-TypeScript cannot handle type information for `.vue` imports by default, so we replace the `tsc` CLI with `vue-tsc` for type checking. In editors, we need [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) to make the TypeScript language service aware of `.vue` types.
-
-## Customize configuration
-
-See [Vite Configuration Reference](https://vitejs.dev/config/).
-
-## Project Setup
+To install the dependencies, run:
 
 ```sh
 bun install
 ```
 
-### Compile and Hot-Reload for Development
+## Start the server and start opening doors to Tübingen
+
+To start the development server, run:
 
 ```sh
 bun dev
 ```
 
-### Type-Check, Compile and Minify for Production
+This starts the development server at <http://localhost:5173>.
 
-```sh
-bun build
-```
+---
 
-### Lint with [ESLint](https://eslint.org/)
+**Note**:
 
-```sh
-bun lint
-```
+Make sure to have the backend running as well. You can find the backend at [engine](../engine).
+
+---

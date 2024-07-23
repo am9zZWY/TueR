@@ -38,6 +38,9 @@
           {{ lastSearch }}
         </span>
       </div>
+      <div v-if="searched && results.length > 0" class="text-gray-600 mt-8">
+        Found {{ results.length }} {{ results.length === 0 ? 'door' : 'doors' }} for "{{ lastQuery }}"
+      </div>
       <div v-if="loading" class="text-center text-gray-600 mt-8">
         <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-tertiary-500 mx-auto"></div>
         <p class="mt-4">{{ TITLE }}</p>
@@ -56,7 +59,7 @@
           </li>
         </transition-group>
         <p v-else-if="searched && results.length === 0" class="text-center text-gray-600 mt-8">
-          No results found. Try another search term.
+          No doors found for "{{ lastQuery }}". Try another search term.
         </p>
       </div>
     </div>
@@ -73,15 +76,15 @@ import { gsap } from 'gsap'
 import SearchResult from '@/components/SearchResult.vue'
 
 const searchStore = useSearchStore()
-const { results, lastSearches } = storeToRefs(searchStore)
+const { results, lastSearches, lastQuery } = storeToRefs(searchStore)
 
 const loading = false
 
 const query = ref('')
 const searched = ref(false)
 const search = () => {
-  searched.value = true
-  searchStore.search(query.value)
+  searched.value = false
+  searchStore.search(query.value)?.then(() => searched.value = true)
 }
 
 

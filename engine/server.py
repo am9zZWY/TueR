@@ -112,6 +112,7 @@ def summarize(doc_id):
 def doc_count():
     con = dbcon.cursor()
 
+    # Get the number of documents
     doc_count = con.execute(
         """
         SELECT COUNT(*) FROM documents
@@ -119,7 +120,6 @@ def doc_count():
     ).fetchall()[0][0]
 
     con.cursor()
-
     return jsonify({"doc_count": doc_count})
 
 

@@ -1,25 +1,21 @@
-# Search Engine
+# TueR – Tübingen Retrieval (Engine)
 
-## Usage
+This is the engine for the **TüR** (**Tü**bingen **R**etrieval) project, built with Python, Flask, DuckDB, and lots of
+motivation.
 
-- To crawl pages, you need to run the following command:
+## Table of Contents
 
-   ```
-   python main.py --online
-   ```
-- Run the following command to start the server:
-
-   ```
-   python server.py
-   ```
-
-- Open your browser and navigate to `http://localhost:8000/` to view the application.
+1. [Requirements](#requirements)
+2. [Installation](#installation)
+3. [Usage](#usage)
+4. [Server](#server)
+5. [Known Issues](#known-issues)
 
 ## Requirements
 
-- `Python 3`
-- `pip`
-- `virtualenv`
+- Python 3
+- pip
+- virtualenv
 
 ## Installation
 
@@ -28,40 +24,64 @@
 - Download and install the latest version of Python 3 from the official website.
 
 2. **Install virtualenv:**
-
-- Open a terminal and run the following command:
-
-   ```
+   ```shell
    pip install virtualenv
    ```
 
-3. **Create a virtual environment:**
-
-- Create the virtual environment:
-
-  ```
-  virtualenv --python=3.11 .venv
-  ```
-
-- Activate the virtual environment:
-
-  ```
-  source .venv/bin/activate
-  ```
+3. **Create and activate a virtual environment:**
+   ```shell
+   virtualenv --python=3.11 .venv
+   source .venv/bin/activate
+   ```
 
 4. **Install requirements:**
-
-- Ensure you have a requirements.txt file in your project directory.
-- Run the following command to install the dependencies:
-
-   ```
+   ```shell
    pip install -r requirements.txt
+   python -m spacy download en_core_web_sm
    ```
 
-- For the text-processing part, we use `spaCy`. You need to download the English model by running the following command:
+## Usage
 
-   ```
-    python -m spacy download en_core_web_sm
-   ```
+### Crawl pages:
 
-5. **Start developing the project**
+```shell
+python main.py --online
+```
+
+### Start the server:
+
+```shell
+python server.py
+```
+
+### Access the application:
+
+Open your browser and navigate to [http://localhost:8000/](http://localhost:8000/)
+
+## Server
+
+The server is built with Flask and runs on port 8000 by default. To start the server, use the following command:
+
+```shell
+python server.py
+```
+
+You can see a list of all available routes by navigating to <http://localhost:8000/site-map>.
+
+---
+
+**Important:**
+
+- The server will only work if you have crawled some pages before.
+- For the summarization you will need a strong CPU and a lot of RAM, as the summarization is done on the fly and can be
+  quite resource-intensive.
+---
+
+## Known Issues
+
+The pipeline will not stop by itself, even if reached the maximum sites.
+You will have to stop it manually by pressing `Ctrl + C` in the terminal.
+But it will be able to resume from where it left off when you restart it.
+
+When the offline pipeline runs, it will try to finish completely before stopping.
+If you force stop it, the pipeline will not save the state because it's saved in `crawlies.db.wal`.
