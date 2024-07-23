@@ -48,6 +48,19 @@ motivation.
 python main.py --online
 ```
 
+---
+
+**Important:**
+
+- The online pipeline will run until you stop it manually, or it reaches the maximum number of sites.
+- You can adapt the configuration in the `main.py`. The crawler has alot of options to configure.
+- The online pipeline will start a lot of threads, so it can be quite resource-intensive. You can limit the number of
+- You need a lot of RAM (~20 GB of RAM) for the offline pipeline.
+  threads in the `main.py` file.
+- Have fun crawling the web!
+
+---
+
 ### Start the server:
 
 ```shell
@@ -75,6 +88,7 @@ You can see a list of all available routes by navigating to <http://localhost:80
 - The server will only work if you have crawled some pages before.
 - For the summarization you will need a strong CPU and a lot of RAM, as the summarization is done on the fly and can be
   quite resource-intensive.
+
 ---
 
 ## Known Issues
