@@ -1,3 +1,4 @@
+import asyncio
 import re
 
 import duckdb
@@ -220,6 +221,7 @@ class Tokenizer(PipelineElement):
         """
         Tokenizes the input data.
         """
+        print(f"Tokenizing {link}...")
         if data is None:
             print(f"Failed to tokenize {link} because the data was empty.")
             return
@@ -228,10 +230,10 @@ class Tokenizer(PipelineElement):
 
         # Get the text from the main content
         main_content = (
-            soup.find("main")
-            or soup.find("article")
-            or soup.find("section")
-            or soup.find("body")
+                soup.find("main")
+                or soup.find("article")
+                or soup.find("section")
+                or soup.find("body")
         )
 
         if main_content is None:
@@ -297,39 +299,56 @@ class Tokenizer(PipelineElement):
 
         # Combine all text
         all_text: list[str] = (
-            extracted_text + [description_content, title_content] + alt_texts
+                extracted_text + [description_content, title_content] + alt_texts
         )
         text = " ".join(all_text).strip()
+        if len(text) > 200_000:
+            print(f"Text for {link} is too long ({len(text)} characters). Skipping.")
+            return
 
         # Tokenize the text
         tokenized_text: list[str] = process_text(text=text)
+        if len(tokenized_text) > 6_000:
+            print(f"Too many tokens ({len(tokenized_text)}) for {link}. Skipping.")
+            return
+
+        print(f"Tokenized {link}, {len(tokenized_text)} tokens found ({self.task_queue.qsize()} tasks left)")
+
         try:
-            tokens = pd.DataFrame({"token": tokenized_text})
-            tokens["doc_id"] = doc_id
-            self.cursor.execute(
-                """
+            tokens = pd.DataFrame({"token": tokenized_text, "doc_id": doc_id})
+
+            # Start a transaction
+            self.cursor.execute("BEGIN TRANSACTION")
+
+            print(f"Inserting {len(tokenized_text)} tokens into the database")
+
+            # Insert new words
+            self.cursor.execute("""
                 INSERT INTO words(word)
                 SELECT DISTINCT token
-                FROM   tokens
-                    EXCEPT
-                SELECT word FROM words
-            """
-            )
+                FROM tokens
+                WHERE token NOT IN (SELECT word FROM words)
+            """)
 
-            self.cursor.execute(
-                """
+            print(f"Computing TFs for {link} ...")
+
+            # Insert term frequencies
+            self.cursor.execute("""
                 INSERT INTO TFs(word, doc, tf)
                 SELECT w.id, t.doc_id, COUNT(*)
                 FROM   tokens AS t, words AS w
                 WHERE  t.token = w.word
                 GROUP BY w.id, t.doc_id, t.token
-            """
-            )
-            print(f"Tokenized {link} ({self.task_queue.qsize()} tasks left)")
+            """)
+
+            # Commit the transaction
+            self.cursor.execute("COMMIT")
+
+            print(f"Finished processing {link}")
         except Exception as e:
-            print(f"Error tokenizing text for {link}: {str(e)}")
-            tokens = pd.DataFrame({"token": tokenized_text})
-            tokens["doc_id"] = doc_id
+            # Rollback in case of error
+            self.cursor.execute("ROLLBACK")
+            print(f"Error processing {link}: {str(e)}")
 
 
 def clean_text(text):
