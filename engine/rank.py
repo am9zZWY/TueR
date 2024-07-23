@@ -82,6 +82,7 @@ def bm25(
         for word, score in sim_list
         if score > 0.7 and word not in query
     ]
+    sim_count = len(sim_weight_list)
 
     # Search terms to look up tf and idf for
     search_terms = set(query).union(set(map(lambda x: x[0], sim_weight_list)))
@@ -158,7 +159,7 @@ def bm25(
 
             score += (
                 weight
-                / 3
+                / sim_count
                 * (
                     idf_val
                     * (tf_val * (k1 + 1))
