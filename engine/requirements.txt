@@ -6,7 +6,7 @@ beautifulsoup4==4.12.3
 duckdb==1.0.0
 eld==1.0.6
 Flask==3.0.3
-Flask-Cors==4.0.1
+Flask-Cors==5.0.0
 flask[async]==3.0.3
 gensim==4.3.3
 lxml==5.2.2
