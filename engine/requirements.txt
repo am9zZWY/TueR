@@ -14,7 +14,7 @@ nest-asyncio==1.6.0
 nltk==3.8.1
 numpy==1.26.4
 pandas==2.2.2
-scikit-learn==1.5.1
+scikit-learn==1.5.2
 spacy==3.7.5
 tensorflow==2.17.0
 tf-keras==2.17.0
