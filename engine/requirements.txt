@@ -11,7 +11,7 @@ flask[async]==3.0.3
 gensim==4.3.3
 lxml==5.2.2
 nest-asyncio==1.6.0
-nltk==3.8.1
+nltk==3.9
 numpy==1.26.4
 pandas==2.2.2
 scikit-learn==1.5.1
